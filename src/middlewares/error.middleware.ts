@@ -31,8 +31,12 @@ export function errorMiddleware(err: unknown, _req: Request, res: Response, _nex
     return;
   }
 
+  // Log com prefixo + código do driver (ex.: "28P01" senha errada,
+  // "3D000" banco não existe, "42P01" tabela não migrada) para achar rápido
+  // a causa nos logs do Render.
+  const pgCode = (err as { code?: string })?.code;
   // eslint-disable-next-line no-console
-  console.error(err);
+  console.error(`[erro 500]${pgCode ? ` pg=${pgCode}` : ""}`, err);
   res.status(500).json({ erro: "Erro interno do servidor." });
 }
 

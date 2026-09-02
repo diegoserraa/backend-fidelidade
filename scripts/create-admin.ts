@@ -11,6 +11,16 @@ import "dotenv/config";
 import { Pool } from "pg";
 import bcrypt from "bcryptjs";
 
+// Mesmo critério de src/config/ssl.ts (duplicado: script de CLI não deve
+// arrastar a config da API só para falar com o banco gerenciado).
+function precisaSsl(url: string): boolean {
+  const flag = (process.env.DATABASE_SSL ?? "").toLowerCase();
+  if (["false", "0", "no"].includes(flag)) return false;
+  if (["true", "1", "yes"].includes(flag)) return true;
+  if (/[?&]sslmode=(require|verify-ca|verify-full)/i.test(url)) return true;
+  return !/@(localhost|127\.0\.0\.1|\[::1\]|::1)([:/]|$)/i.test(url);
+}
+
 function arg(nome: string): string {
   const i = process.argv.indexOf(`--${nome}`);
   const valor = i >= 0 ? process.argv[i + 1] : undefined;
@@ -31,7 +41,11 @@ async function main() {
   }
 
   const senhaHash = await bcrypt.hash(senha, 10);
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const connectionString = process.env.DATABASE_URL;
+  const pool = new Pool({
+    connectionString,
+    ssl: precisaSsl(connectionString ?? "") ? { rejectUnauthorized: false } : undefined,
+  });
 
   const { rows } = await pool.query(
     `INSERT INTO super_admin (nome, email, senha_hash)

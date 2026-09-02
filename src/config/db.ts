@@ -1,8 +1,15 @@
 import { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
 import { env } from "./env";
+import { precisaSsl } from "./ssl";
 
 export const pool = new Pool({
   connectionString: env.databaseUrl,
+  // Bancos gerenciados (Render, Supabase, Neon, Heroku...) só aceitam conexão
+  // SSL e apresentam um certificado de cadeia própria que o Node rejeita por
+  // padrão. Sem isto, TODA query estoura ("self-signed certificate in
+  // certificate chain") e as rotas que tocam o banco devolvem 500 — enquanto
+  // /api/health, que não usa banco, continua 200.
+  ssl: precisaSsl(env.databaseUrl) ? { rejectUnauthorized: false } : undefined,
 });
 
 pool.on("error", (err) => {

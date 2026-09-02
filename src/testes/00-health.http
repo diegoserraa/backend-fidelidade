@@ -1,0 +1,10 @@
+### =====================================================================
+### HEALTH / SANITY — não exige autenticação, roda antes de tudo
+### para confirmar que a API está de pé antes dos demais testes.
+### =====================================================================
+
+### Health check (200, { status: "ok" })
+GET {{baseUrl}}/health
+
+### Rota inexistente (404, { erro: "Rota não encontrada." })
+GET {{baseUrl}}/rota-que-nao-existe

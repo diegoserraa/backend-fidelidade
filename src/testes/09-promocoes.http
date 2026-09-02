@@ -1,0 +1,82 @@
+### =====================================================================
+### PROMOÇÕES — toda a rota exige papel "gestor"
+### GET/POST /promocoes, GET/PUT/DELETE /:id, POST /:id/enviar
+### DELETE é soft delete (marca como "inativa"), retorna 204.
+### =====================================================================
+
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "cnpj": "{{cnpj}}",
+  "email": "{{email}}",
+  "senha": "{{senha}}"
+}
+###
+@token = {{login.response.body.$.token}}
+
+### Listar promoções (200)
+GET {{baseUrl}}/promocoes
+Authorization: Bearer {{token}}
+
+### Criar promoção (201, status inicial "rascunho")
+# @name criarPromocao
+POST {{baseUrl}}/promocoes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "titulo": "Semana do Pão Francês",
+  "mensagem": "Pão francês com 20% de desconto essa semana!"
+}
+
+@promocaoId = {{criarPromocao.response.body.$.id}}
+
+### Criar promoção — payload inválido (422, título curto)
+POST {{baseUrl}}/promocoes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "titulo": "X",
+  "mensagem": "Y"
+}
+
+### Buscar promoção por id (200)
+GET {{baseUrl}}/promocoes/{{promocaoId}}
+Authorization: Bearer {{token}}
+
+### Buscar promoção — id inexistente (404)
+GET {{baseUrl}}/promocoes/99999999-9999-9999-9999-999999999999
+Authorization: Bearer {{token}}
+
+### Atualizar promoção (200)
+PUT {{baseUrl}}/promocoes/{{promocaoId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "mensagem": "Pão francês com 25% de desconto essa semana!"
+}
+
+### Enviar promoção (200, status passa a "enviada" e preenche enviada_em)
+POST {{baseUrl}}/promocoes/{{promocaoId}}/enviar
+Authorization: Bearer {{token}}
+
+### Remover promoção — soft delete (204, sem corpo)
+DELETE {{baseUrl}}/promocoes/{{promocaoId}}
+Authorization: Bearer {{token}}
+
+### Confirmar soft delete — status deve constar como "inativa" (200)
+GET {{baseUrl}}/promocoes/{{promocaoId}}
+Authorization: Bearer {{token}}
+
+### Criar promoção — sem token (401)
+POST {{baseUrl}}/promocoes
+Content-Type: application/json
+
+{
+  "titulo": "Sem token",
+  "mensagem": "Teste sem token"
+}

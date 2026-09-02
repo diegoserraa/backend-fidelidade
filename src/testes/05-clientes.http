@@ -1,0 +1,68 @@
+### =====================================================================
+### CLIENTES — GET /clientes, GET /clientes/:id, PATCH /:id/status,
+### GET /clientes/:id/resumo
+### Usa o cliente_empresa criado em 00-seed.sql (clienteId no env).
+### =====================================================================
+
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "cnpj": "{{cnpj}}",
+  "email": "{{email}}",
+  "senha": "{{senha}}"
+}
+
+###
+@token = {{login.response.body.$.token}}
+
+### Listar clientes da empresa, paginado (200)
+GET {{baseUrl}}/clientes?page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### Listar clientes — paginação inválida (422, pageSize > 100)
+GET {{baseUrl}}/clientes?page=1&pageSize=500
+Authorization: Bearer {{token}}
+
+### Buscar cliente por id (200)
+GET {{baseUrl}}/clientes/{{clienteId}}
+Authorization: Bearer {{token}}
+
+### Buscar cliente — id inexistente (404)
+GET {{baseUrl}}/clientes/99999999-9999-9999-9999-999999999999
+Authorization: Bearer {{token}}
+
+### Resumo do cliente — saldo de pontos, histórico etc. (200)
+GET {{baseUrl}}/clientes/{{clienteId}}/resumo
+Authorization: Bearer {{token}}
+
+### Inativar cliente (200)
+PATCH {{baseUrl}}/clientes/{{clienteId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "inativo"
+}
+
+### Reativar cliente — necessário para os testes de compras/resgates (200)
+PATCH {{baseUrl}}/clientes/{{clienteId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "ativo"
+}
+
+### Atualizar status — valor fora do enum (422)
+PATCH {{baseUrl}}/clientes/{{clienteId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "banido"
+}
+
+### Listar clientes — sem token (401)
+GET {{baseUrl}}/clientes

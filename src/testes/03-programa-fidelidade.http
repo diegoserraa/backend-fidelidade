@@ -1,0 +1,64 @@
+### =====================================================================
+### PROGRAMA DE FIDELIDADE — GET/PUT /programa-fidelidade
+### PUT exige papel "gestor".
+### =====================================================================
+
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "cnpj": "{{cnpj}}",
+  "email": "{{email}}",
+  "senha": "{{senha}}"
+}
+
+###
+
+@token = {{login.response.body.$.token}}
+
+### Buscar regra do programa (200 — retorna default se nunca configurado)
+GET {{baseUrl}}/programa-fidelidade
+Authorization: Bearer {{token}}
+
+### Atualizar regra — gestor (200)
+### "a cada R$ 10 em compras, o cliente ganha 5 pontos"
+PUT {{baseUrl}}/programa-fidelidade
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "valorPorPonto": 10,
+  "pontosPorCiclo": 5,
+  "ativo": true
+}
+
+### Confirmar que a alteração persistiu (200, valorPorPonto = 10, pontosPorCiclo = 5)
+GET {{baseUrl}}/programa-fidelidade
+Authorization: Bearer {{token}}
+
+### Atualizar regra — pontosPorCiclo inválido (422, precisa ser inteiro positivo)
+PUT {{baseUrl}}/programa-fidelidade
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "pontosPorCiclo": 0
+}
+
+### Atualizar regra — valor inválido (422, precisa ser positivo)
+PUT {{baseUrl}}/programa-fidelidade
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "valorPorPonto": -5
+}
+
+### Atualizar regra — sem token (401)
+PUT {{baseUrl}}/programa-fidelidade
+Content-Type: application/json
+
+{
+  "valorPorPonto": 5
+}

@@ -1,0 +1,84 @@
+### =====================================================================
+### COMPRAS — POST /compras, GET /compras, GET /compras/:id
+### Cada compra credita pontos ao cliente_empresa (seed) segundo o
+### valorPorPonto do programa de fidelidade.
+### =====================================================================
+
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "cnpj": "{{cnpj}}",
+  "email": "{{email}}",
+  "senha": "{{senha}}"
+}
+###
+@token = {{login.response.body.$.token}}
+
+### Registrar compra (201) — chave de idempotência via header
+# @name registrarCompra
+POST {{baseUrl}}/compras
+Authorization: Bearer {{token}}
+Idempotency-Key: compra-teste-001
+Content-Type: application/json
+
+{
+  "clienteId": "{{clienteId}}",
+  "valor": 150.00
+}
+
+@compraId = {{registrarCompra.response.body.$.id}}
+
+### Reenviar com a MESMA Idempotency-Key — deve retornar a compra já
+### criada (mesmo id), sem gerar pontos duplicados
+POST {{baseUrl}}/compras
+Authorization: Bearer {{token}}
+Idempotency-Key: compra-teste-001
+Content-Type: application/json
+
+{
+  "clienteId": "{{clienteId}}",
+  "valor": 150.00
+}
+
+### Registrar compra — valor inválido (422, precisa ser positivo)
+POST {{baseUrl}}/compras
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clienteId": "{{clienteId}}",
+  "valor": -10
+}
+
+### Registrar compra — clienteId que não existe (404/erro de negócio)
+POST {{baseUrl}}/compras
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clienteId": "99999999-9999-9999-9999-999999999999",
+  "valor": 50
+}
+
+### Registrar compra — sem token (401)
+POST {{baseUrl}}/compras
+Content-Type: application/json
+
+{
+  "clienteId": "{{clienteId}}",
+  "valor": 50
+}
+
+### Listar compras da empresa, paginado (200)
+GET {{baseUrl}}/compras?page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### Buscar compra por id (200)
+GET {{baseUrl}}/compras/{{compraId}}
+Authorization: Bearer {{token}}
+
+### Buscar compra — id inexistente (404)
+GET {{baseUrl}}/compras/99999999-9999-9999-9999-999999999999
+Authorization: Bearer {{token}}

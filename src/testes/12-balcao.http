@@ -1,0 +1,101 @@
+### =====================================================================
+### BALCÃO (painel) — identificar cliente, cadastrar no balcão, pontuar
+### e dar baixa em resgate pendente.
+### Pré-requisito: rodar 11-cliente-portal.http para obter:
+###   - {{identidadeToken}} (POST /cliente/qr)
+###   - {{resgateId}} e {{resgateToken}} (POST /cliente/:empresaId/resgates)
+### Cole os valores nos @ abaixo (o REST Client não compartilha vars
+### entre arquivos).
+### =====================================================================
+
+@identidadeToken = COLE_O_TOKEN_DE_/cliente/qr
+@resgateToken = COLE_O_TOKEN_DE_/cliente/:empresaId/resgates
+@resgateId = COLE_O_resgateId
+
+### Login do gestor (200)
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "cnpj": "{{cnpj}}",
+  "email": "{{email}}",
+  "senha": "{{senha}}"
+}
+###
+@token = {{login.response.body.$.token}}
+
+### Identificar cliente pelo QR (200) — nome, CPF mascarado, saldo
+POST {{baseUrl}}/clientes/identificar
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "token": "{{identidadeToken}}"
+}
+
+### Identificar cliente pelo CPF (200) — alternativa sem QR
+# @name identCpf
+POST {{baseUrl}}/clientes/identificar
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "cpf": "{{cpfCliente}}"
+}
+###
+@clienteEmpresaId = {{identCpf.response.body.$.clienteEmpresaId}}
+
+### Cadastrar cliente novo no balcão (201) — CPF válido ainda sem conta
+POST {{baseUrl}}/clientes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "João Balcão",
+  "cpf": "39053344705",
+  "telefone": "11933332222"
+}
+
+### Registrar compra com Idempotency-Key (201)
+POST {{baseUrl}}/compras
+Authorization: Bearer {{token}}
+Idempotency-Key: balcao-compra-001
+Content-Type: application/json
+
+{
+  "clienteId": "{{clienteEmpresaId}}",
+  "valor": 25.50
+}
+
+### Reenviar a MESMA Idempotency-Key — não credita de novo (201, mesmo id)
+POST {{baseUrl}}/compras
+Authorization: Bearer {{token}}
+Idempotency-Key: balcao-compra-001
+Content-Type: application/json
+
+{
+  "clienteId": "{{clienteEmpresaId}}",
+  "valor": 25.50
+}
+
+### Validar resgate pelo QR (200) — cliente, recompensa, custo, saldo
+POST {{baseUrl}}/resgates/validar
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "token": "{{resgateToken}}"
+}
+
+### Confirmar a baixa (200) — debita os pontos
+POST {{baseUrl}}/resgates/{{resgateId}}/confirmar
+Authorization: Bearer {{token}}
+
+### Confirmar de novo (409) — não está mais pendente
+POST {{baseUrl}}/resgates/{{resgateId}}/confirmar
+Authorization: Bearer {{token}}
+
+### Listar apenas resgates pendentes (200)
+GET {{baseUrl}}/resgates?status=pendente
+Authorization: Bearer {{token}}

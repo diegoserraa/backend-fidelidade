@@ -1,0 +1,22 @@
+### =====================================================================
+### DASHBOARD — GET /dashboard
+### =====================================================================
+
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "cnpj": "{{cnpj}}",
+  "email": "{{email}}",
+  "senha": "{{senha}}"
+}
+###
+@token = {{login.response.body.$.token}}
+
+### Buscar indicadores do dashboard (200)
+GET {{baseUrl}}/dashboard
+Authorization: Bearer {{token}}
+
+### Buscar dashboard — sem token (401)
+GET {{baseUrl}}/dashboard

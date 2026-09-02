@@ -1,0 +1,109 @@
+### =====================================================================
+### RESGATES — POST /resgates, GET /resgates, GET /resgates/:id
+### Débita pontos do cliente_empresa (seed tem 500 pontos). Este arquivo
+### cria sua própria recompensa para não depender de rodar 07 antes.
+### =====================================================================
+
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "cnpj": "{{cnpj}}",
+  "email": "{{email}}",
+  "senha": "{{senha}}"
+}
+###
+@token = {{login.response.body.$.token}}
+
+### Criar recompensa de apoio para o teste de resgate (201)
+# @name criarRecompensa
+POST {{baseUrl}}/recompensas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "titulo": "Brinde para teste de resgate",
+  "custoPontos": 30
+}
+
+@recompensaId = {{criarRecompensa.response.body.$.id}}
+
+### Registrar resgate (201) — chave de idempotência via header
+# @name registrarResgate
+POST {{baseUrl}}/resgates
+Authorization: Bearer {{token}}
+Idempotency-Key: resgate-teste-001
+Content-Type: application/json
+
+{
+  "clienteId": "{{clienteId}}",
+  "recompensaId": "{{recompensaId}}"
+}
+
+@resgateId = {{registrarResgate.response.body.$.id}}
+
+### Reenviar com a MESMA Idempotency-Key — deve retornar o resgate já
+### criado, sem debitar pontos duas vezes
+POST {{baseUrl}}/resgates
+Authorization: Bearer {{token}}
+Idempotency-Key: resgate-teste-001
+Content-Type: application/json
+
+{
+  "clienteId": "{{clienteId}}",
+  "recompensaId": "{{recompensaId}}"
+}
+
+### Registrar resgate — saldo insuficiente (custoPontos absurdamente alto)
+# @name criarRecompensaCara
+POST {{baseUrl}}/recompensas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "titulo": "Recompensa cara demais",
+  "custoPontos": 999999
+}
+
+@recompensaCaraId = {{criarRecompensaCara.response.body.$.id}}
+
+POST {{baseUrl}}/resgates
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clienteId": "{{clienteId}}",
+  "recompensaId": "{{recompensaCaraId}}"
+}
+
+### Registrar resgate — payload inválido (422, ids não são uuid)
+POST {{baseUrl}}/resgates
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clienteId": "nao-e-uuid",
+  "recompensaId": "nao-e-uuid"
+}
+
+### Registrar resgate — sem token (401)
+POST {{baseUrl}}/resgates
+Content-Type: application/json
+
+{
+  "clienteId": "{{clienteId}}",
+  "recompensaId": "{{recompensaId}}"
+}
+
+### Listar resgates da empresa, paginado (200)
+GET {{baseUrl}}/resgates?page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### Buscar resgate por id (200)
+GET {{baseUrl}}/resgates/{{resgateId}}
+Authorization: Bearer {{token}}
+
+### Buscar resgate — id inexistente (404)
+GET {{baseUrl}}/resgates/99999999-9999-9999-9999-999999999999
+Authorization: Bearer {{token}}

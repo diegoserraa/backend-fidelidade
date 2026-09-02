@@ -1,0 +1,75 @@
+### =====================================================================
+### EMPRESA — GET/PUT /empresa, GET/PUT /empresa/config
+### Todas exigem auth; PUT exige papel "gestor".
+### =====================================================================
+
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "cnpj": "{{cnpj}}",
+  "email": "{{email}}",
+  "senha": "{{senha}}"
+}
+
+###
+
+@token = {{login.response.body.$.token}}
+
+### Buscar dados da empresa (200)
+GET {{baseUrl}}/empresa
+Authorization: Bearer {{token}}
+
+### Atualizar dados da empresa — gestor (200)
+PUT {{baseUrl}}/empresa
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Padaria Teste LTDA - Atualizada",
+  "telefone": "11988880000"
+}
+
+### Atualizar empresa — payload inválido (422)
+PUT {{baseUrl}}/empresa
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "nao-e-email"
+}
+
+### Atualizar empresa — sem token (401)
+PUT {{baseUrl}}/empresa
+Content-Type: application/json
+
+{
+  "nome": "Sem token"
+}
+
+### Buscar config visual da empresa (200)
+GET {{baseUrl}}/empresa/config
+Authorization: Bearer {{token}}
+
+### Atualizar config visual — gestor (200)
+PUT {{baseUrl}}/empresa/config
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "corPrimaria": "#FF6600",
+  "corSecundaria": "#FFFFFF",
+  "corTexto": "#FFFFFF",
+  "corFundo": "#111827",
+  "exibirTotalGasto": true
+}
+
+### Atualizar config — cor em formato inválido (422)
+PUT {{baseUrl}}/empresa/config
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "corPrimaria": "laranja"
+}

@@ -1,0 +1,90 @@
+### =====================================================================
+### RECOMPENSAS — GET/POST /recompensas, GET/PUT/:id, PATCH /:id/status
+### Criação, edição e status exigem papel "gestor".
+### A recompensa criada aqui é reutilizada em 08-resgates.http.
+### =====================================================================
+
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "cnpj": "{{cnpj}}",
+  "email": "{{email}}",
+  "senha": "{{senha}}"
+}
+###
+@token = {{login.response.body.$.token}}
+
+### Listar recompensas (200)
+GET {{baseUrl}}/recompensas
+Authorization: Bearer {{token}}
+
+### Criar recompensa (201)
+# @name criarRecompensa
+POST {{baseUrl}}/recompensas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "titulo": "Café grátis",
+  "descricao": "Um café expresso cortesia",
+  "custoPontos": 50
+}
+
+@recompensaId = {{criarRecompensa.response.body.$.id}}
+
+### Criar recompensa — payload inválido (422, custoPontos precisa ser positivo)
+POST {{baseUrl}}/recompensas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "titulo": "X",
+  "custoPontos": -10
+}
+
+### Buscar recompensa por id (200)
+GET {{baseUrl}}/recompensas/{{recompensaId}}
+Authorization: Bearer {{token}}
+
+### Buscar recompensa — id inexistente (404)
+GET {{baseUrl}}/recompensas/99999999-9999-9999-9999-999999999999
+Authorization: Bearer {{token}}
+
+### Atualizar recompensa (200)
+PUT {{baseUrl}}/recompensas/{{recompensaId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "titulo": "Café grátis (médio)",
+  "custoPontos": 40
+}
+
+### Inativar recompensa (200)
+PATCH {{baseUrl}}/recompensas/{{recompensaId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "inativa"
+}
+
+### Reativar recompensa — necessário para o teste de resgate (200)
+PATCH {{baseUrl}}/recompensas/{{recompensaId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "ativa"
+}
+
+### Criar recompensa — sem token (401)
+POST {{baseUrl}}/recompensas
+Content-Type: application/json
+
+{
+  "titulo": "Sem token",
+  "custoPontos": 10
+}

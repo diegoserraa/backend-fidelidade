@@ -1,0 +1,83 @@
+### =====================================================================
+### PORTAL DO CLIENTE — /auth/cliente/* e /cliente/*
+### Sessão do cliente (PF, por CPF). Fluxo: login -> QR de identidade ->
+### catálogo -> solicitar resgate (fica PENDENTE) -> acompanhar/cancelar.
+### O seed cria o cliente 52998224725 / senha 123456 com 300 pontos na
+### empresa 11111111 e a recompensa "Café grátis" (100 pts).
+### =====================================================================
+
+### Registrar cliente novo (201) — CPF válido qualquer
+# @name registrar
+POST {{baseUrl}}/auth/cliente/registrar
+Content-Type: application/json
+
+{
+  "nome": "Maria Teste",
+  "cpf": "11144477735",
+  "senha": "123456",
+  "telefone": "11955554444"
+}
+
+### Login do cliente do seed (200)
+# @name loginCliente
+POST {{baseUrl}}/auth/cliente/login
+Content-Type: application/json
+
+{
+  "cpf": "{{cpfCliente}}",
+  "senha": "{{senhaCliente}}"
+}
+###
+@ct = {{loginCliente.response.body.$.token}}
+
+### Dados do cliente logado (200)
+GET {{baseUrl}}/auth/cliente/me
+Authorization: Bearer {{ct}}
+
+### Empresas em que o cliente participa + saldo (200)
+GET {{baseUrl}}/cliente/empresas
+Authorization: Bearer {{ct}}
+
+### Gerar token de identidade (QR) — expira em ~90s (200)
+# @name qr
+POST {{baseUrl}}/cliente/qr
+Authorization: Bearer {{ct}}
+###
+@identidadeToken = {{qr.response.body.$.token}}
+
+### Catálogo de recompensas ativas da empresa (200)
+GET {{baseUrl}}/cliente/{{empresaId}}/recompensas
+Authorization: Bearer {{ct}}
+
+### Solicitar resgate — cria resgate PENDENTE + token de QR (201)
+# @name solicitar
+POST {{baseUrl}}/cliente/{{empresaId}}/resgates
+Authorization: Bearer {{ct}}
+Content-Type: application/json
+
+{
+  "recompensaId": "77777777-7777-7777-7777-777777777777"
+}
+###
+@resgateId = {{solicitar.response.body.$.resgateId}}
+@resgateToken = {{solicitar.response.body.$.token}}
+
+### Segundo pedido enquanto há pendente — 409
+POST {{baseUrl}}/cliente/{{empresaId}}/resgates
+Authorization: Bearer {{ct}}
+Content-Type: application/json
+
+{
+  "recompensaId": "77777777-7777-7777-7777-777777777777"
+}
+
+### Acompanhar o resgate (200) — status pendente/confirmado/expirado
+GET {{baseUrl}}/cliente/resgates/{{resgateId}}
+Authorization: Bearer {{ct}}
+
+### Cancelar o resgate pendente (200)
+DELETE {{baseUrl}}/cliente/resgates/{{resgateId}}
+Authorization: Bearer {{ct}}
+
+### Sem token (401)
+GET {{baseUrl}}/cliente/empresas

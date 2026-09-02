@@ -1,0 +1,107 @@
+### =====================================================================
+### USUÁRIOS — CRUD restrito a "gestor"
+### =====================================================================
+
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "cnpj": "{{cnpj}}",
+  "email": "{{email}}",
+  "senha": "{{senha}}"
+}
+###
+
+
+@token = {{login.response.body.$.token}}
+
+### Listar usuários da empresa (200)
+GET {{baseUrl}}/usuarios
+Authorization: Bearer {{token}}
+
+### Criar um atendente (201)
+# @name criarUsuario
+POST {{baseUrl}}/usuarios
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Atendente Teste",
+  "email": "atendente.teste@padariateste.com",
+  "senha": "123456",
+  "papel": "atendente"
+}
+
+@usuarioId = {{criarUsuario.response.body.$.id}}
+
+### Criar usuário — email duplicado na mesma empresa (409)
+POST {{baseUrl}}/usuarios
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Duplicado",
+  "email": "atendente.teste@padariateste.com",
+  "senha": "123456",
+  "papel": "atendente"
+}
+
+### Criar usuário — payload inválido (422, senha curta e papel fora do enum)
+POST {{baseUrl}}/usuarios
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "X",
+  "email": "nao-e-email",
+  "senha": "123",
+  "papel": "admin"
+}
+
+### Buscar usuário criado por id (200)
+GET {{baseUrl}}/usuarios/{{usuarioId}}
+Authorization: Bearer {{token}}
+
+### Buscar usuário inexistente (404)
+GET {{baseUrl}}/usuarios/99999999-9999-9999-9999-999999999999
+Authorization: Bearer {{token}}
+
+### Atualizar usuário (200)
+PUT {{baseUrl}}/usuarios/{{usuarioId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Atendente Teste Renomeado"
+}
+
+### Inativar usuário (200)
+PATCH {{baseUrl}}/usuarios/{{usuarioId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "inativo"
+}
+
+### Reativar usuário (200)
+PATCH {{baseUrl}}/usuarios/{{usuarioId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "ativo"
+}
+
+### Atualizar status — valor fora do enum (422)
+PATCH {{baseUrl}}/usuarios/{{usuarioId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "banido"
+}
+
+### Listar usuários — sem token (401)
+GET {{baseUrl}}/usuarios

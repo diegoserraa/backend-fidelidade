@@ -9,6 +9,8 @@
     "postinstall": "npm run build",
     "start": "node dist/server.js",
     "migrate": "node -r ts-node/register/transpile-only ./scripts/migrate.ts",
+    "seed": "node -r ts-node/register/transpile-only ./scripts/seed.ts",
+    "create-admin": "node -r ts-node/register/transpile-only ./scripts/create-admin.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

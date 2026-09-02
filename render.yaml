@@ -1,0 +1,22 @@
+# Documenta os comandos corretos do serviço no Render (Root Directory deve
+# ficar VAZIO — o repositório já é a raiz do projeto). Não conserta um
+# serviço já criado manualmente com Root Directory/Build/Start errados —
+# isso só se ajusta direto no painel do Render (Settings do serviço).
+services:
+  - type: web
+    name: fidelidade-api
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

@@ -7,10 +7,10 @@ export interface VinculoRow {
   saldo_pontos: number;
   status: string;
   logo_url: string | null;
-  cor_primaria: string | null;
-  cor_secundaria: string | null;
-  cor_texto: string | null;
-  cor_fundo: string | null;
+  cor_primaria: string;
+  cor_secundaria: string;
+  cor_texto: string;
+  cor_fundo: string;
   exibir_total_gasto: boolean | null;
   total_gasto: string | null;
   pontos_acumulados: string | null;
@@ -48,10 +48,14 @@ export const portalClienteRepository = {
               ce.saldo_pontos,
               ce.status,
               cfg.logo_url,
-              cfg.cor_primaria,
-              cfg.cor_secundaria,
-              cfg.cor_texto,
-              cfg.cor_fundo,
+              -- Mesmos defaults de empresaService.getConfig() — sem isso, uma
+              -- empresa sem linha em empresa_config ainda (recém-criada)
+              -- manda NULL pro app do cliente, que cai no verde genérico do
+              -- Fideliza+ em vez do preto padrão que o painel já mostra.
+              COALESCE(cfg.cor_primaria, '#000000') AS cor_primaria,
+              COALESCE(cfg.cor_secundaria, '#FFFFFF') AS cor_secundaria,
+              COALESCE(cfg.cor_texto, '#FFFFFF') AS cor_texto,
+              COALESCE(cfg.cor_fundo, '#FFFFFF') AS cor_fundo,
               cfg.exibir_total_gasto,
               ce.created_at AS desde,
               COALESCE((SELECT SUM(valor) FROM compra WHERE cliente_empresa_id = ce.id), 0)::text AS total_gasto,
@@ -75,10 +79,10 @@ export const portalClienteRepository = {
               ce.saldo_pontos,
               ce.status,
               cfg.logo_url,
-              cfg.cor_primaria,
-              cfg.cor_secundaria,
-              cfg.cor_texto,
-              cfg.cor_fundo,
+              COALESCE(cfg.cor_primaria, '#000000') AS cor_primaria,
+              COALESCE(cfg.cor_secundaria, '#FFFFFF') AS cor_secundaria,
+              COALESCE(cfg.cor_texto, '#FFFFFF') AS cor_texto,
+              COALESCE(cfg.cor_fundo, '#FFFFFF') AS cor_fundo,
               cfg.exibir_total_gasto,
               ce.created_at AS desde,
               COALESCE((SELECT SUM(valor) FROM compra WHERE cliente_empresa_id = ce.id), 0)::text AS total_gasto,

@@ -39,14 +39,18 @@ export const empresaService = {
     const empresa = await empresaRepository.findById(empresaId);
     if (!empresa || empresa.status !== "ativa") throw AppError.notFound("Empresa");
 
+    // Mesmos defaults de getConfig() — sem isso, uma empresa recém-criada
+    // (sem linha em empresa_config ainda) manda corPrimaria: null pro app do
+    // cliente, que cai no verde genérico do Fideliza+ em vez do preto padrão
+    // que o painel já mostra pra ela.
     const config = await empresaRepository.findConfig(empresaId);
     return {
       nome: empresa.nome,
       logoUrl: config?.logo_url ?? null,
-      corPrimaria: config?.cor_primaria ?? null,
-      corSecundaria: config?.cor_secundaria ?? null,
-      corTexto: config?.cor_texto ?? null,
-      corFundo: config?.cor_fundo ?? null,
+      corPrimaria: config?.cor_primaria ?? "#000000",
+      corSecundaria: config?.cor_secundaria ?? "#FFFFFF",
+      corTexto: config?.cor_texto ?? "#FFFFFF",
+      corFundo: config?.cor_fundo ?? "#FFFFFF",
     };
   },
 

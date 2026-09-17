@@ -1,5 +1,11 @@
 import { query } from "../../config/db";
 
+export interface PushSubscriptionRow {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+}
+
 export interface PromocaoRow {
   id: string;
   empresa_id: string;
@@ -68,14 +74,18 @@ export const promocoesRepository = {
     return rows[0] ?? null;
   },
 
-  async listPushTokens(empresaId: string): Promise<string[]> {
-    const { rows } = await query<{ token: string }>(
-      `SELECT DISTINCT pt.token
-         FROM push_token pt
+  async listPushSubscriptions(empresaId: string): Promise<PushSubscriptionRow[]> {
+    const { rows } = await query<PushSubscriptionRow>(
+      `SELECT DISTINCT pt.endpoint, pt.p256dh, pt.auth
+         FROM push_subscription pt
          JOIN cliente_empresa ce ON ce.cliente_id = pt.cliente_id
         WHERE ce.empresa_id = $1 AND ce.status = 'ativo'`,
       [empresaId]
     );
-    return rows.map((r) => r.token);
+    return rows;
+  },
+
+  async removerPushSubscriptionPorEndpoint(endpoint: string): Promise<void> {
+    await query(`DELETE FROM push_subscription WHERE endpoint = $1`, [endpoint]);
   },
 };

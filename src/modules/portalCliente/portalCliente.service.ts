@@ -114,6 +114,17 @@ export const portalClienteService = {
     if (!ok) throw new AppError("Só é possível cancelar um resgate pendente.", 409);
     return { resgateId, status: "cancelado" as const };
   },
+
+  async inscreverPush(
+    clienteId: string,
+    subscription: { endpoint: string; p256dh: string; auth: string }
+  ) {
+    await portalClienteRepository.salvarPushSubscription(clienteId, subscription);
+  },
+
+  async desinscreverPush(clienteId: string, endpoint: string) {
+    await portalClienteRepository.removerPushSubscription(clienteId, endpoint);
+  },
 };
 
 async function exigirVinculoAtivo(clienteId: string, empresaId: string): Promise<VinculoRow> {

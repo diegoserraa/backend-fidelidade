@@ -22,6 +22,12 @@ if (jwtSecret.length < 32) {
 const corsOriginsRaw = (process.env.CORS_ORIGINS ?? "").trim();
 const corsOrigins = corsOriginsRaw ? corsOriginsRaw.split(",").map((o) => o.trim()) : null;
 
+// Push notifications (Web Push/VAPID). Opcional: sem as duas chaves, o envio
+// de campanhas fica desativado e avisa no log em vez de quebrar o servidor.
+const vapidPublicKey = (process.env.VAPID_PUBLIC_KEY ?? "").trim() || null;
+const vapidPrivateKey = (process.env.VAPID_PRIVATE_KEY ?? "").trim() || null;
+const vapidSubject = (process.env.VAPID_SUBJECT ?? "").trim() || "mailto:contato@example.com";
+
 export const env = {
   port: Number(process.env.PORT ?? 3000),
   nodeEnv: process.env.NODE_ENV ?? "development",
@@ -29,4 +35,7 @@ export const env = {
   jwtSecret,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "8h",
   corsOrigins,
+  vapidPublicKey,
+  vapidPrivateKey,
+  vapidSubject,
 };

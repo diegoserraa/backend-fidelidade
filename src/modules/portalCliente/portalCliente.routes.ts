@@ -9,6 +9,8 @@ portalClienteRoutes.use(clienteAuthMiddleware);
 
 portalClienteRoutes.get("/empresas", asyncHandler(portalClienteController.listEmpresas));
 portalClienteRoutes.post("/qr", asyncHandler(portalClienteController.gerarQr));
+portalClienteRoutes.post("/push/subscribe", asyncHandler(portalClienteController.inscreverPush));
+portalClienteRoutes.post("/push/unsubscribe", asyncHandler(portalClienteController.desinscreverPush));
 portalClienteRoutes.get("/resgates/:id", asyncHandler(portalClienteController.getResgate));
 portalClienteRoutes.delete("/resgates/:id", asyncHandler(portalClienteController.cancelarResgate));
 portalClienteRoutes.post("/:empresaId/entrar", asyncHandler(portalClienteController.entrar));

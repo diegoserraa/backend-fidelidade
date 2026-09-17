@@ -220,4 +220,25 @@ export const portalClienteRepository = {
     );
     return (rowCount ?? 0) > 0;
   },
+
+  /** Salva (ou atualiza as chaves de) a assinatura de push do dispositivo. */
+  async salvarPushSubscription(
+    clienteId: string,
+    subscription: { endpoint: string; p256dh: string; auth: string }
+  ): Promise<void> {
+    await query(
+      `INSERT INTO push_subscription (cliente_id, endpoint, p256dh, auth)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (endpoint) DO UPDATE
+          SET cliente_id = $1, p256dh = $3, auth = $4`,
+      [clienteId, subscription.endpoint, subscription.p256dh, subscription.auth]
+    );
+  },
+
+  async removerPushSubscription(clienteId: string, endpoint: string): Promise<void> {
+    await query(`DELETE FROM push_subscription WHERE cliente_id = $1 AND endpoint = $2`, [
+      clienteId,
+      endpoint,
+    ]);
+  },
 };

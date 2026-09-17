@@ -1,4 +1,5 @@
 import { AppError } from "../../utils/AppError";
+import { pushEnabled, webpush } from "../../config/webpush";
 import { promocoesRepository } from "./promocoes.repository";
 
 export const promocoesService = {
@@ -36,12 +37,35 @@ export const promocoesService = {
       throw new AppError("Essa promoção já foi enviada.", 409);
     }
 
-    const tokens = await promocoesRepository.listPushTokens(empresaId);
+    const subscriptions = await promocoesRepository.listPushSubscriptions(empresaId);
 
-    // TODO: integrar com um provider real (FCM/OneSignal/etc). Por ora,
-    // apenas loga e marca como enviada - suficiente para o MVP validar o fluxo.
-    // eslint-disable-next-line no-console
-    console.log(`[push] Enviando promoção "${promocao.titulo}" para ${tokens.length} dispositivo(s).`);
+    if (!pushEnabled) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[push] VAPID não configurado — promoção "${promocao.titulo}" marcada como enviada sem notificar ${subscriptions.length} dispositivo(s).`
+      );
+    } else {
+      const payload = JSON.stringify({ titulo: promocao.titulo, mensagem: promocao.mensagem });
+      await Promise.all(
+        subscriptions.map(async (sub) => {
+          try {
+            await webpush.sendNotification(
+              { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+              payload
+            );
+          } catch (err) {
+            const statusCode = (err as { statusCode?: number }).statusCode;
+            if (statusCode === 404 || statusCode === 410) {
+              // Assinatura expirada/revogada no navegador do cliente — limpa.
+              await promocoesRepository.removerPushSubscriptionPorEndpoint(sub.endpoint);
+            } else {
+              // eslint-disable-next-line no-console
+              console.error(`[push] Falha ao enviar para ${sub.endpoint}:`, err);
+            }
+          }
+        })
+      );
+    }
 
     const atualizada = await promocoesRepository.marcarEnviada(empresaId, id);
     return mapPromocao(atualizada!);

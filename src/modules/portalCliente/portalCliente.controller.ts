@@ -10,6 +10,14 @@ const paginacaoSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
 });
+const pushSubscriptionSchema = z.object({
+  endpoint: z.string().url(),
+  keys: z.object({
+    p256dh: z.string().min(1),
+    auth: z.string().min(1),
+  }),
+});
+const pushUnsubscribeSchema = z.object({ endpoint: z.string().url() });
 
 function clienteId(req: Request): string {
   if (!req.clienteAuth) throw AppError.unauthorized();
@@ -57,5 +65,21 @@ export const portalClienteController = {
   async cancelarResgate(req: Request, res: Response) {
     const { id } = idParam.parse(req.params);
     res.status(200).json(await portalClienteService.cancelarResgate(clienteId(req), id));
+  },
+
+  async inscreverPush(req: Request, res: Response) {
+    const { endpoint, keys } = pushSubscriptionSchema.parse(req.body);
+    await portalClienteService.inscreverPush(clienteId(req), {
+      endpoint,
+      p256dh: keys.p256dh,
+      auth: keys.auth,
+    });
+    res.status(204).send();
+  },
+
+  async desinscreverPush(req: Request, res: Response) {
+    const { endpoint } = pushUnsubscribeSchema.parse(req.body);
+    await portalClienteService.desinscreverPush(clienteId(req), endpoint);
+    res.status(204).send();
   },
 };

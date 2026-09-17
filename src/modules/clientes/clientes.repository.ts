@@ -30,8 +30,10 @@ export const clientesRepository = {
 
     const [dataResult, countResult] = await Promise.all([
       query<ClienteEmpresaRow>(
-        `SELECT ce.id AS cliente_empresa_id, c.id AS cliente_id, c.nome, c.email,
-                c.telefone, c.cpf, ce.saldo_pontos, ce.status, ce.created_at
+        `SELECT ce.id AS cliente_empresa_id, c.id AS cliente_id,
+                COALESCE(ce.nome_local, c.nome) AS nome, c.email,
+                COALESCE(ce.telefone_local, c.telefone) AS telefone,
+                c.cpf, ce.saldo_pontos, ce.status, ce.created_at
            FROM cliente_empresa ce
            JOIN cliente c ON c.id = ce.cliente_id
           WHERE ce.empresa_id = $1
@@ -50,8 +52,10 @@ export const clientesRepository = {
 
   async findByIdInEmpresa(empresaId: string, clienteEmpresaId: string): Promise<ClienteEmpresaRow | null> {
     const { rows } = await query<ClienteEmpresaRow>(
-      `SELECT ce.id AS cliente_empresa_id, c.id AS cliente_id, c.nome, c.email,
-              c.telefone, c.cpf, ce.saldo_pontos, ce.status, ce.created_at
+      `SELECT ce.id AS cliente_empresa_id, c.id AS cliente_id,
+              COALESCE(ce.nome_local, c.nome) AS nome, c.email,
+              COALESCE(ce.telefone_local, c.telefone) AS telefone,
+              c.cpf, ce.saldo_pontos, ce.status, ce.created_at
          FROM cliente_empresa ce
          JOIN cliente c ON c.id = ce.cliente_id
         WHERE ce.empresa_id = $1 AND ce.id = $2`,
@@ -96,38 +100,56 @@ export const clientesRepository = {
   /**
    * Garante um vínculo cliente x empresa. Se já existe, opcionalmente reativa
    * (usado no cadastro pelo balcão); no auto-vínculo por leitura de QR o status
-   * atual é preservado. Retorna o id de cliente_empresa.
+   * atual é preservado. `nome`/`telefone`, quando informados, viram o "apelido
+   * local" desta empresa para o cliente (ver nome_local/telefone_local) — não
+   * tocam no cadastro global. Retorna o id de cliente_empresa.
    */
   async criarOuReativarVinculo(
     empresaId: string,
     clienteId: string,
-    reativar: boolean
+    reativar: boolean,
+    dadosLocais?: { nome?: string; telefone?: string | null }
   ): Promise<string> {
     const { rows } = await query<{ id: string }>(
-      `INSERT INTO cliente_empresa (cliente_id, empresa_id, saldo_pontos, status)
-       VALUES ($1, $2, 0, 'ativo')
+      `INSERT INTO cliente_empresa (cliente_id, empresa_id, saldo_pontos, status, nome_local, telefone_local)
+       VALUES ($1, $2, 0, 'ativo', $4, $5)
        ON CONFLICT (cliente_id, empresa_id) DO UPDATE
           SET status = CASE WHEN $3 THEN 'ativo' ELSE cliente_empresa.status END,
+              nome_local = COALESCE($4, cliente_empresa.nome_local),
+              telefone_local = COALESCE($5, cliente_empresa.telefone_local),
               updated_at = now()
        RETURNING id`,
-      [clienteId, empresaId, reativar]
+      [clienteId, empresaId, reativar, dadosLocais?.nome ?? null, dadosLocais?.telefone ?? null]
     );
     return rows[0].id;
   },
 
-  async updateClienteDados(
-    clienteId: string,
-    dados: { nome?: string; telefone?: string | null; cpf?: string }
-  ): Promise<ClienteBaseRow | null> {
-    const { rows } = await query<ClienteBaseRow>(
-      `UPDATE cliente
-          SET nome = COALESCE($2, nome),
-              telefone = COALESCE($3, telefone),
-              cpf = COALESCE($4, cpf),
+  /** Edita nome/telefone só para esta empresa (nome_local/telefone_local) —
+   *  nunca toca no cadastro global do cliente, que é compartilhado entre
+   *  padarias (ver migration 009). */
+  async updateVinculoLocal(
+    empresaId: string,
+    clienteEmpresaId: string,
+    dados: { nome?: string; telefone?: string | null }
+  ): Promise<void> {
+    await query(
+      `UPDATE cliente_empresa
+          SET nome_local = COALESCE($3, nome_local),
+              telefone_local = CASE WHEN $4 THEN $5 ELSE telefone_local END,
               updated_at = now()
+        WHERE empresa_id = $1 AND id = $2`,
+      [empresaId, clienteEmpresaId, dados.nome ?? null, "telefone" in dados, dados.telefone ?? null]
+    );
+  },
+
+  /** CPF é a chave que liga o mesmo cliente entre padarias (migration 004) —
+   *  diferente de nome/telefone, uma correção aqui é global de propósito. */
+  async updateClienteCpf(clienteId: string, cpf: string): Promise<ClienteBaseRow | null> {
+    const { rows } = await query<ClienteBaseRow>(
+      `UPDATE cliente SET cpf = $2, updated_at = now()
         WHERE id = $1
         RETURNING id, nome, cpf, email, telefone`,
-      [clienteId, dados.nome ?? null, dados.telefone ?? null, dados.cpf ?? null]
+      [clienteId, cpf]
     );
     return rows[0] ?? null;
   },

@@ -27,7 +27,14 @@ export const clientesService = {
     return this.getById(empresaId, clienteEmpresaId);
   },
 
-  /** Edita os dados do cliente (nome / telefone / CPF). O `id` é de cliente_empresa. */
+  /**
+   * Edita os dados do cliente (nome / telefone / CPF). O `id` é de
+   * cliente_empresa. Nome e telefone valem só para ESTA empresa (nome_local/
+   * telefone_local) — uma padaria corrigindo o apelido de um cliente não pode
+   * mudar o que outra padaria vê. CPF é a exceção: é a chave que liga o
+   * cliente entre padarias (cadastro global), então uma correção aqui vale
+   * pra todo mundo de propósito.
+   */
   async atualizar(
     empresaId: string,
     clienteEmpresaId: string,
@@ -36,26 +43,25 @@ export const clientesService = {
     const atual = await clientesRepository.findByIdInEmpresa(empresaId, clienteEmpresaId);
     if (!atual) throw AppError.notFound("Cliente");
 
-    let cpf: string | undefined;
     if (dados.cpf !== undefined) {
-      cpf = normalizeCpf(dados.cpf);
+      const cpf = normalizeCpf(dados.cpf);
       if (!isValidCpf(cpf)) throw new AppError("CPF inválido.", 422);
       const dono = await clientesRepository.findClienteByCpf(cpf);
       if (dono && dono.id !== atual.cliente_id) {
         throw new AppError("Já existe outro cliente com esse CPF.", 409);
       }
+      await clientesRepository.updateClienteCpf(atual.cliente_id, cpf);
     }
 
-    await clientesRepository.updateClienteDados(atual.cliente_id, {
-      nome: dados.nome?.trim(),
-      telefone:
-        dados.telefone === undefined
-          ? undefined
-          : dados.telefone
-            ? dados.telefone.replace(/\D/g, "")
-            : null,
-      cpf,
-    });
+    if (dados.nome !== undefined || dados.telefone !== undefined) {
+      await clientesRepository.updateVinculoLocal(empresaId, clienteEmpresaId, {
+        ...(dados.nome !== undefined ? { nome: dados.nome.trim() } : {}),
+        ...(dados.telefone !== undefined
+          ? { telefone: dados.telefone ? dados.telefone.replace(/\D/g, "") : null }
+          : {}),
+      });
+    }
+
     return this.getById(empresaId, clienteEmpresaId);
   },
 
@@ -83,16 +89,20 @@ export const clientesService = {
     const cpf = normalizeCpf(dados.cpf);
     if (!isValidCpf(cpf)) throw new AppError("CPF inválido.", 422);
 
+    const nome = dados.nome.trim();
+    const telefone = dados.telefone ? dados.telefone.replace(/\D/g, "") : null;
+
     let base = await clientesRepository.findClienteByCpf(cpf);
     if (!base) {
-      base = await clientesRepository.createClienteMinimo({
-        nome: dados.nome.trim(),
-        cpf,
-        telefone: dados.telefone ? dados.telefone.replace(/\D/g, "") : null,
-      });
+      base = await clientesRepository.createClienteMinimo({ nome, cpf, telefone });
     }
 
-    const clienteEmpresaId = await clientesRepository.criarOuReativarVinculo(empresaId, base.id, true);
+    // Nome/telefone digitados no balcão valem só para esta empresa (mesmo
+    // quando o cliente já existia globalmente, cadastrado por outra padaria).
+    const clienteEmpresaId = await clientesRepository.criarOuReativarVinculo(empresaId, base.id, true, {
+      nome,
+      telefone,
+    });
     return this.getById(empresaId, clienteEmpresaId);
   },
 

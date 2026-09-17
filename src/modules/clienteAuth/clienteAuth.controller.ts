@@ -37,4 +37,10 @@ export const clienteAuthController = {
     await clienteAuthService.excluirConta(req.clienteAuth.clienteId);
     res.status(204).send();
   },
+
+  async sair(req: Request, res: Response) {
+    if (!req.clienteAuth) throw AppError.unauthorized();
+    await clienteAuthService.sair(req.clienteAuth.clienteId);
+    res.status(204).send();
+  },
 };

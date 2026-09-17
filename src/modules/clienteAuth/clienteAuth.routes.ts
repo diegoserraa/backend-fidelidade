@@ -10,3 +10,4 @@ clienteAuthRoutes.post("/registrar", authRateLimit, asyncHandler(clienteAuthCont
 clienteAuthRoutes.post("/login", authRateLimit, asyncHandler(clienteAuthController.login));
 clienteAuthRoutes.get("/me", clienteAuthMiddleware, asyncHandler(clienteAuthController.me));
 clienteAuthRoutes.delete("/me", clienteAuthMiddleware, asyncHandler(clienteAuthController.excluirConta));
+clienteAuthRoutes.post("/sair", clienteAuthMiddleware, asyncHandler(clienteAuthController.sair));

@@ -19,10 +19,11 @@ export function verifyToken(token: string): JwtPayload {
 /**
  * Sessão do cliente (app / portal). O payload não tem `empresaId` — o cliente é
  * PF e transita entre várias empresas. O campo `scope` separa este token do de
- * usuário da empresa, então um nunca é aceito no lugar do outro.
+ * usuário da empresa, então um nunca é aceito no lugar do outro. `sv` (sessão
+ * versão) impõe sessão única — ver clienteAuth.middleware.ts.
  */
-export function signClienteToken(clienteId: string): string {
-  const payload: ClienteJwtPayload = { clienteId, scope: "cliente" };
+export function signClienteToken(clienteId: string, sessaoVersao: number): string {
+  const payload: ClienteJwtPayload = { clienteId, scope: "cliente", sv: sessaoVersao };
   return jwt.sign(payload, env.jwtSecret, {
     expiresIn: env.jwtExpiresIn as SignOptions["expiresIn"],
   });
@@ -30,10 +31,10 @@ export function signClienteToken(clienteId: string): string {
 
 export function verifyClienteToken(token: string): ClienteJwtPayload {
   const payload = jwt.verify(token, env.jwtSecret) as Partial<ClienteJwtPayload>;
-  if (payload.scope !== "cliente" || !payload.clienteId) {
+  if (payload.scope !== "cliente" || !payload.clienteId || typeof payload.sv !== "number") {
     throw new Error("TOKEN_ESCOPO_INVALIDO");
   }
-  return { clienteId: payload.clienteId, scope: "cliente" };
+  return { clienteId: payload.clienteId, scope: "cliente", sv: payload.sv };
 }
 
 /**

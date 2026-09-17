@@ -12,6 +12,10 @@ export interface JwtPayload {
 export interface ClienteJwtPayload {
   clienteId: string;
   scope: "cliente";
+  /** Versão da sessão no momento em que o token foi emitido — comparada com
+   *  `cliente.sessao_versao` a cada request (clienteAuth.middleware) para
+   *  impor sessão única: logar num aparelho novo invalida os anteriores. */
+  sv: number;
 }
 
 /** Dono da plataforma — não pertence a nenhuma empresa (ver migration 007). */

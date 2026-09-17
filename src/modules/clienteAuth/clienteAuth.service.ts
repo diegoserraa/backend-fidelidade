@@ -26,7 +26,7 @@ export const clienteAuthService = {
       }
       const senhaHash = await hashPassword(input.senha);
       await clienteAuthRepository.setSenha(existente.id, senhaHash);
-      return emitir({ ...existente, senha_hash: senhaHash });
+      return await emitir({ ...existente, senha_hash: senhaHash });
     }
 
     const senhaHash = await hashPassword(input.senha);
@@ -37,7 +37,7 @@ export const clienteAuthService = {
       telefone: input.telefone ? input.telefone.replace(/\D/g, "") : null,
       email: input.email?.trim() || null,
     });
-    return emitir(cliente);
+    return await emitir(cliente);
   },
 
   async login({ cpf, senha }: { cpf: string; senha: string }) {
@@ -48,7 +48,13 @@ export const clienteAuthService = {
     if (!cliente || !cliente.senha_hash || !ok) {
       throw AppError.unauthorized("Credenciais inválidas.");
     }
-    return emitir(cliente);
+    return await emitir(cliente);
+  },
+
+  /** Também avança a sessão (ver `emitir`) — um token esquecido logado em
+   *  outro aparelho não continua valendo depois de um logout explícito. */
+  async sair(clienteId: string) {
+    await clienteAuthRepository.incrementarSessao(clienteId);
   },
 
   async me(clienteId: string) {
@@ -63,8 +69,17 @@ export const clienteAuthService = {
   },
 };
 
-function emitir(cliente: ClienteRow) {
-  return { token: signClienteToken(cliente.id), cliente: publico(cliente) };
+/**
+ * Emite o token de sessão e, de propósito, avança `sessao_versao` antes de
+ * assinar. Programa de fidelidade é por pessoa: sem isso, várias pessoas
+ * podiam dividir um CPF+senha e ficar em aparelhos diferentes ao mesmo tempo,
+ * cada uma somando pontos pra mesma conta. Como o middleware (clienteAuth.
+ * middleware.ts) rejeita qualquer token com versão desatualizada, logar num
+ * aparelho novo derruba a sessão de qualquer aparelho anterior.
+ */
+async function emitir(cliente: ClienteRow) {
+  const sessaoVersao = await clienteAuthRepository.incrementarSessao(cliente.id);
+  return { token: signClienteToken(cliente.id, sessaoVersao), cliente: publico(cliente) };
 }
 
 function publico(cliente: ClienteRow) {

@@ -41,6 +41,9 @@ export const promocoesService = {
 
     const subscriptions = await promocoesRepository.listPushSubscriptions(empresaId);
 
+    let enviados = 0;
+    let falhas = 0;
+
     if (!pushEnabled) {
       // eslint-disable-next-line no-console
       console.warn(
@@ -55,12 +58,14 @@ export const promocoesService = {
               { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
               payload
             );
+            enviados++;
           } catch (err) {
             const statusCode = (err as { statusCode?: number }).statusCode;
             if (statusCode === 404 || statusCode === 410) {
               // Assinatura expirada/revogada no navegador do cliente — limpa.
               await promocoesRepository.removerPushSubscriptionPorEndpoint(sub.endpoint);
             } else {
+              falhas++;
               // eslint-disable-next-line no-console
               console.error(`[push] Falha ao enviar para ${sub.endpoint}:`, err);
             }
@@ -70,7 +75,15 @@ export const promocoesService = {
     }
 
     const atualizada = await promocoesRepository.marcarEnviada(empresaId, id);
-    return mapPromocao(atualizada!);
+    return {
+      ...mapPromocao(atualizada!),
+      push: {
+        habilitado: pushEnabled,
+        dispositivos: subscriptions.length,
+        enviados,
+        falhas,
+      },
+    };
   },
 };
 

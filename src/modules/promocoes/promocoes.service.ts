@@ -33,8 +33,10 @@ export const promocoesService = {
   async enviar(empresaId: string, id: string) {
     const promocao = await promocoesRepository.findById(empresaId, id);
     if (!promocao) throw AppError.notFound("Promoção");
-    if (promocao.status === "enviada") {
-      throw new AppError("Essa promoção já foi enviada.", 409);
+    // "enviada" pode ser disparada de novo quantas vezes for preciso (ex.: lembrete
+    // recorrente). Só uma campanha arquivada (inativa) fica bloqueada.
+    if (promocao.status === "inativa") {
+      throw new AppError("Uma promoção arquivada não pode ser enviada.", 409);
     }
 
     const subscriptions = await promocoesRepository.listPushSubscriptions(empresaId);

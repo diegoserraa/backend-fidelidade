@@ -79,7 +79,7 @@ export const promocoesRepository = {
       `SELECT DISTINCT pt.endpoint, pt.p256dh, pt.auth
          FROM push_subscription pt
          JOIN cliente_empresa ce ON ce.cliente_id = pt.cliente_id
-        WHERE ce.empresa_id = $1 AND ce.status = 'ativo'`,
+        WHERE ce.empresa_id = $1 AND ce.status = 'ativo' AND ce.notificacoes_ativas = true`,
       [empresaId]
     );
     return rows;

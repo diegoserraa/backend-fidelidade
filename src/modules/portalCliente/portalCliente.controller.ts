@@ -18,6 +18,7 @@ const pushSubscriptionSchema = z.object({
   }),
 });
 const pushUnsubscribeSchema = z.object({ endpoint: z.string().url() });
+const notificacoesSchema = z.object({ ativas: z.boolean() });
 
 function clienteId(req: Request): string {
   if (!req.clienteAuth) throw AppError.unauthorized();
@@ -80,6 +81,13 @@ export const portalClienteController = {
   async desinscreverPush(req: Request, res: Response) {
     const { endpoint } = pushUnsubscribeSchema.parse(req.body);
     await portalClienteService.desinscreverPush(clienteId(req), endpoint);
+    res.status(204).send();
+  },
+
+  async atualizarNotificacoes(req: Request, res: Response) {
+    const { empresaId } = empresaIdParam.parse(req.params);
+    const { ativas } = notificacoesSchema.parse(req.body);
+    await portalClienteService.atualizarNotificacoes(clienteId(req), empresaId, ativas);
     res.status(204).send();
   },
 };

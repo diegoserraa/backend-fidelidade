@@ -1,5 +1,6 @@
 import { AppError } from "../../utils/AppError";
 import { pushEnabled, webpush } from "../../config/webpush";
+import { empresaRepository } from "../empresa/empresa.repository";
 import { promocoesRepository } from "./promocoes.repository";
 
 export const promocoesService = {
@@ -50,7 +51,15 @@ export const promocoesService = {
         `[push] VAPID não configurado — promoção "${promocao.titulo}" marcada como enviada sem notificar ${subscriptions.length} dispositivo(s).`
       );
     } else {
-      const payload = JSON.stringify({ titulo: promocao.titulo, mensagem: promocao.mensagem });
+      // A notificação usa a logo DESTA padaria, não um ícone genérico — o
+      // mesmo aparelho pode estar inscrito em várias (ver migration 011),
+      // então quem manda tem que se identificar visualmente.
+      const config = await empresaRepository.findConfig(empresaId);
+      const payload = JSON.stringify({
+        titulo: promocao.titulo,
+        mensagem: promocao.mensagem,
+        icone: config?.logo_url ?? null,
+      });
       await Promise.all(
         subscriptions.map(async (sub) => {
           try {

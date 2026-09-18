@@ -15,6 +15,7 @@ export interface VinculoRow {
   total_gasto: string | null;
   pontos_acumulados: string | null;
   desde: Date;
+  notificacoes_ativas: boolean;
 }
 
 export interface MovimentacaoRow {
@@ -58,6 +59,7 @@ export const portalClienteRepository = {
               COALESCE(cfg.cor_fundo, '#FFFFFF') AS cor_fundo,
               cfg.exibir_total_gasto,
               ce.created_at AS desde,
+              ce.notificacoes_ativas,
               COALESCE((SELECT SUM(valor) FROM compra WHERE cliente_empresa_id = ce.id), 0)::text AS total_gasto,
               COALESCE((SELECT SUM(pontos) FROM movimentacao_pontos
                          WHERE cliente_empresa_id = ce.id AND tipo = 'entrada'), 0)::text AS pontos_acumulados
@@ -85,6 +87,7 @@ export const portalClienteRepository = {
               COALESCE(cfg.cor_fundo, '#FFFFFF') AS cor_fundo,
               cfg.exibir_total_gasto,
               ce.created_at AS desde,
+              ce.notificacoes_ativas,
               COALESCE((SELECT SUM(valor) FROM compra WHERE cliente_empresa_id = ce.id), 0)::text AS total_gasto,
               COALESCE((SELECT SUM(pontos) FROM movimentacao_pontos
                          WHERE cliente_empresa_id = ce.id AND tipo = 'entrada'), 0)::text AS pontos_acumulados
@@ -244,5 +247,16 @@ export const portalClienteRepository = {
       clienteId,
       endpoint,
     ]);
+  },
+
+  /** Preferência de notificação POR padaria — não mexe na inscrição de push
+   *  do aparelho (essa é única por dispositivo, ver push_subscription). */
+  async atualizarNotificacoes(clienteId: string, empresaId: string, ativas: boolean): Promise<boolean> {
+    const { rowCount } = await query(
+      `UPDATE cliente_empresa SET notificacoes_ativas = $3, updated_at = now()
+        WHERE cliente_id = $1 AND empresa_id = $2`,
+      [clienteId, empresaId, ativas]
+    );
+    return (rowCount ?? 0) > 0;
   },
 };

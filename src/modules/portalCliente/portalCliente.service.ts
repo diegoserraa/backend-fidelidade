@@ -125,6 +125,14 @@ export const portalClienteService = {
   async desinscreverPush(clienteId: string, endpoint: string) {
     await portalClienteRepository.removerPushSubscription(clienteId, endpoint);
   },
+
+  /** Liga/desliga notificação só desta padaria — a inscrição de push do
+   *  aparelho (única, compartilhada entre todas as padarias do cliente)
+   *  continua intacta. */
+  async atualizarNotificacoes(clienteId: string, empresaId: string, ativas: boolean) {
+    const ok = await portalClienteRepository.atualizarNotificacoes(clienteId, empresaId, ativas);
+    if (!ok) throw AppError.notFound("Vínculo com a empresa");
+  },
 };
 
 async function exigirVinculoAtivo(clienteId: string, empresaId: string): Promise<VinculoRow> {
@@ -174,6 +182,7 @@ function mapVinculo(v: VinculoRow) {
     totalGasto: Number(v.total_gasto ?? 0),
     pontosAcumulados,
     desde: v.desde,
+    notificacoesAtivas: v.notificacoes_ativas,
     ...calcularNivel(pontosAcumulados),
   };
 }

@@ -17,3 +17,4 @@ portalClienteRoutes.post("/:empresaId/entrar", asyncHandler(portalClienteControl
 portalClienteRoutes.get("/:empresaId/recompensas", asyncHandler(portalClienteController.listRecompensas));
 portalClienteRoutes.get("/:empresaId/extrato", asyncHandler(portalClienteController.getExtrato));
 portalClienteRoutes.post("/:empresaId/resgates", asyncHandler(portalClienteController.solicitarResgate));
+portalClienteRoutes.put("/:empresaId/notificacoes", asyncHandler(portalClienteController.atualizarNotificacoes));

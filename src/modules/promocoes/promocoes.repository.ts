@@ -14,6 +14,8 @@ export interface PromocaoRow {
   status: string;
   enviada_em: Date | null;
   created_at: Date;
+  /** "Válido até" — data (sem hora). NULL = sem validade, pode enviar sempre. */
+  validade: Date | null;
 }
 
 export const promocoesRepository = {
@@ -33,23 +35,31 @@ export const promocoesRepository = {
     return rows[0] ?? null;
   },
 
-  async create(empresaId: string, dados: { titulo: string; mensagem: string }) {
+  async create(empresaId: string, dados: { titulo: string; mensagem: string; validade?: string | null }) {
     const { rows } = await query<PromocaoRow>(
-      `INSERT INTO promocao (empresa_id, titulo, mensagem) VALUES ($1, $2, $3) RETURNING *`,
-      [empresaId, dados.titulo, dados.mensagem]
+      `INSERT INTO promocao (empresa_id, titulo, mensagem, validade) VALUES ($1, $2, $3, $4) RETURNING *`,
+      [empresaId, dados.titulo, dados.mensagem, dados.validade ?? null]
     );
     return rows[0];
   },
 
-  async update(empresaId: string, id: string, dados: { titulo?: string; mensagem?: string }) {
+  async update(
+    empresaId: string,
+    id: string,
+    dados: { titulo?: string; mensagem?: string; validade?: string | null }
+  ) {
+    // `validade` pode ser explicitamente limpa (null) — diferente de "não
+    // mexer" (undefined) — por isso não dá pra usar só COALESCE nela, que
+    // trataria null como "mantém a atual".
     const { rows } = await query<PromocaoRow>(
       `UPDATE promocao
           SET titulo = COALESCE($3, titulo),
               mensagem = COALESCE($4, mensagem),
+              validade = CASE WHEN $5 THEN $6 ELSE validade END,
               updated_at = now()
         WHERE empresa_id = $1 AND id = $2
         RETURNING *`,
-      [empresaId, id, dados.titulo ?? null, dados.mensagem ?? null]
+      [empresaId, id, dados.titulo ?? null, dados.mensagem ?? null, "validade" in dados, dados.validade ?? null]
     );
     return rows[0] ?? null;
   },

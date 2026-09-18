@@ -3,8 +3,16 @@ import { z } from "zod";
 import { AppError } from "../../utils/AppError";
 import { promocoesService } from "./promocoes.service";
 
-const createSchema = z.object({ titulo: z.string().min(2), mensagem: z.string().min(2) });
-const updateSchema = z.object({ titulo: z.string().min(2).optional(), mensagem: z.string().min(2).optional() });
+const createSchema = z.object({
+  titulo: z.string().min(2),
+  mensagem: z.string().min(2),
+  validade: z.string().date().nullable().optional(),
+});
+const updateSchema = z.object({
+  titulo: z.string().min(2).optional(),
+  mensagem: z.string().min(2).optional(),
+  validade: z.string().date().nullable().optional(),
+});
 const idParamSchema = z.object({ id: z.string().uuid() });
 
 function empresaId(req: Request): string {

@@ -15,11 +15,15 @@ export const promocoesService = {
     return mapPromocao(promocao);
   },
 
-  async create(empresaId: string, dados: { titulo: string; mensagem: string }) {
+  async create(empresaId: string, dados: { titulo: string; mensagem: string; validade?: string | null }) {
     return mapPromocao(await promocoesRepository.create(empresaId, dados));
   },
 
-  async update(empresaId: string, id: string, dados: { titulo?: string; mensagem?: string }) {
+  async update(
+    empresaId: string,
+    id: string,
+    dados: { titulo?: string; mensagem?: string; validade?: string | null }
+  ) {
     const promocao = await promocoesRepository.update(empresaId, id, dados);
     if (!promocao) throw AppError.notFound("Promoção");
     return mapPromocao(promocao);
@@ -38,6 +42,15 @@ export const promocoesService = {
     // recorrente). Só uma campanha arquivada (inativa) fica bloqueada.
     if (promocao.status === "inativa") {
       throw new AppError("Uma promoção arquivada não pode ser enviada.", 409);
+    }
+    // Reenvio (lembrete recorrente) não pode escapar a validade — confere de
+    // novo TODA vez que "Enviar" é clicado, não só na criação, pra pegar o
+    // caso de esquecer de atualizar a data numa campanha antiga.
+    if (estaVencida(promocao.validade)) {
+      throw new AppError(
+        `Essa promoção venceu em ${formatarData(promocao.validade!)}. Atualize a validade antes de enviar.`,
+        409
+      );
     }
 
     const subscriptions = await promocoesRepository.listPushSubscriptions(empresaId);
@@ -96,6 +109,19 @@ export const promocoesService = {
   },
 };
 
+/** "Válido até" é inclusivo (a promoção ainda vale NO dia da validade) —
+ *  só considera vencida a partir do dia seguinte. */
+function estaVencida(validade: Date | null): boolean {
+  if (!validade) return false;
+  const hoje = new Date();
+  const hojeUTC = Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth(), hoje.getUTCDate());
+  return validade.getTime() < hojeUTC;
+}
+
+function formatarData(data: Date): string {
+  return data.toLocaleDateString("pt-BR", { timeZone: "UTC" });
+}
+
 function mapPromocao(row: {
   id: string;
   titulo: string;
@@ -103,6 +129,7 @@ function mapPromocao(row: {
   status: string;
   enviada_em: Date | null;
   created_at: Date;
+  validade: Date | null;
 }) {
   return {
     id: row.id,
@@ -111,5 +138,7 @@ function mapPromocao(row: {
     status: row.status,
     enviadaEm: row.enviada_em,
     createdAt: row.created_at,
+    validade: row.validade,
+    vencida: estaVencida(row.validade),
   };
 }

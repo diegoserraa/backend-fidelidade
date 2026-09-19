@@ -122,6 +122,16 @@ function formatarData(data: Date): string {
   return data.toLocaleDateString("pt-BR", { timeZone: "UTC" });
 }
 
+/** `pg` devolve colunas DATE como `Date` (meia-noite UTC). Se mandássemos esse
+ *  objeto direto no JSON, o Express serializa com `.toISOString()` completo
+ *  ("2026-09-25T00:00:00.000Z") — e um `<input type="date">` no front exige
+ *  exatamente "YYYY-MM-DD", então ele simplesmente ignora o valor e fica em
+ *  branco. Por isso a validade "sumia" ao reabrir o formulário de edição. */
+function toDateOnly(data: Date | null): string | null {
+  if (!data) return null;
+  return data.toISOString().slice(0, 10);
+}
+
 function mapPromocao(row: {
   id: string;
   titulo: string;
@@ -138,7 +148,7 @@ function mapPromocao(row: {
     status: row.status,
     enviadaEm: row.enviada_em,
     createdAt: row.created_at,
-    validade: row.validade,
+    validade: toDateOnly(row.validade),
     vencida: estaVencida(row.validade),
   };
 }

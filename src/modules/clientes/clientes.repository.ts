@@ -154,6 +154,13 @@ export const clientesRepository = {
     return rows[0] ?? null;
   },
 
+  /** E-mail é usado pra recuperação de senha da conta (ver clienteAuth.service.ts)
+   *  — é um dado da CONTA, não de uma padaria específica, então é global igual
+   *  ao CPF, nunca um "apelido local" por empresa. */
+  async updateClienteEmail(clienteId: string, email: string | null): Promise<void> {
+    await query(`UPDATE cliente SET email = $2, updated_at = now() WHERE id = $1`, [clienteId, email]);
+  },
+
   /** Remove o vínculo cliente x empresa (cascata em compra/resgate/movimentação
    *  desta empresa). O cliente global permanece — pode ter vínculo com outras. */
   async deleteVinculo(empresaId: string, clienteEmpresaId: string): Promise<boolean> {

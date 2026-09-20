@@ -32,6 +32,7 @@ const updateSchema = z
     nome: z.string().min(2).optional(),
     telefone: z.string().min(8).nullable().optional(),
     cpf: z.string().min(11).optional(),
+    email: z.string().email().nullable().optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: "Nada para atualizar." });
 

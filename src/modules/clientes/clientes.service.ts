@@ -28,17 +28,17 @@ export const clientesService = {
   },
 
   /**
-   * Edita os dados do cliente (nome / telefone / CPF). O `id` é de
+   * Edita os dados do cliente (nome / telefone / CPF / e-mail). O `id` é de
    * cliente_empresa. Nome e telefone valem só para ESTA empresa (nome_local/
    * telefone_local) — uma padaria corrigindo o apelido de um cliente não pode
-   * mudar o que outra padaria vê. CPF é a exceção: é a chave que liga o
-   * cliente entre padarias (cadastro global), então uma correção aqui vale
-   * pra todo mundo de propósito.
+   * mudar o que outra padaria vê. CPF e e-mail são exceção: são dados da
+   * CONTA (identidade global / recuperação de senha), então uma correção
+   * aqui vale pra todo mundo de propósito.
    */
   async atualizar(
     empresaId: string,
     clienteEmpresaId: string,
-    dados: { nome?: string; telefone?: string | null; cpf?: string }
+    dados: { nome?: string; telefone?: string | null; cpf?: string; email?: string | null }
   ) {
     const atual = await clientesRepository.findByIdInEmpresa(empresaId, clienteEmpresaId);
     if (!atual) throw AppError.notFound("Cliente");
@@ -51,6 +51,10 @@ export const clientesService = {
         throw new AppError("Já existe outro cliente com esse CPF.", 409);
       }
       await clientesRepository.updateClienteCpf(atual.cliente_id, cpf);
+    }
+
+    if (dados.email !== undefined) {
+      await clientesRepository.updateClienteEmail(atual.cliente_id, dados.email?.trim() || null);
     }
 
     if (dados.nome !== undefined || dados.telefone !== undefined) {

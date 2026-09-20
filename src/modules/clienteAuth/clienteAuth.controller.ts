@@ -16,6 +16,15 @@ const loginSchema = z.object({
   senha: z.string().min(6),
 });
 
+const esqueciSenhaSchema = z.object({
+  cpf: z.string().min(11),
+});
+
+const redefinirSenhaSchema = z.object({
+  token: z.string().min(10),
+  novaSenha: z.string().min(8),
+});
+
 export const clienteAuthController = {
   async registrar(req: Request, res: Response) {
     const input = registrarSchema.parse(req.body);
@@ -42,5 +51,15 @@ export const clienteAuthController = {
     if (!req.clienteAuth) throw AppError.unauthorized();
     await clienteAuthService.sair(req.clienteAuth.clienteId);
     res.status(204).send();
+  },
+
+  async esqueciSenha(req: Request, res: Response) {
+    const { cpf } = esqueciSenhaSchema.parse(req.body);
+    res.status(200).json(await clienteAuthService.esqueciSenha(cpf));
+  },
+
+  async redefinirSenha(req: Request, res: Response) {
+    const { token, novaSenha } = redefinirSenhaSchema.parse(req.body);
+    res.status(200).json(await clienteAuthService.redefinirSenha(token, novaSenha));
   },
 };

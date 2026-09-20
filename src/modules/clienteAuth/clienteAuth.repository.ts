@@ -72,6 +72,38 @@ export const clienteAuthRepository = {
     return rows[0]?.sessao_versao ?? null;
   },
 
+  async salvarTokenReset(id: string, tokenHash: string, expiraEm: Date): Promise<void> {
+    await query(
+      `UPDATE cliente SET reset_senha_token_hash = $2, reset_senha_expira_em = $3, updated_at = now() WHERE id = $1`,
+      [id, tokenHash, expiraEm]
+    );
+  },
+
+  /** Só acha o cliente se o token bater E ainda não tiver expirado. */
+  async findByResetTokenHash(tokenHash: string): Promise<ClienteRow | null> {
+    const { rows } = await query<ClienteRow>(
+      `SELECT id, nome, cpf, email, telefone, senha_hash, sessao_versao, created_at
+         FROM cliente
+        WHERE reset_senha_token_hash = $1 AND reset_senha_expira_em > now()
+        LIMIT 1`,
+      [tokenHash]
+    );
+    return rows[0] ?? null;
+  },
+
+  /** Define a nova senha e invalida o token no mesmo update — uso único. */
+  async redefinirSenhaComToken(id: string, senhaHash: string): Promise<void> {
+    await query(
+      `UPDATE cliente
+          SET senha_hash = $2,
+              reset_senha_token_hash = NULL,
+              reset_senha_expira_em = NULL,
+              updated_at = now()
+        WHERE id = $1`,
+      [id, senhaHash]
+    );
+  },
+
   /** Exclui a conta do cliente. Cascata apaga vínculos, compras, resgates e
    *  movimentações em todas as empresas (LGPD — direito à exclusão). */
   async deleteById(id: string): Promise<boolean> {

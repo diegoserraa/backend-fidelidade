@@ -11,3 +11,5 @@ clienteAuthRoutes.post("/login", authRateLimit, asyncHandler(clienteAuthControll
 clienteAuthRoutes.get("/me", clienteAuthMiddleware, asyncHandler(clienteAuthController.me));
 clienteAuthRoutes.delete("/me", clienteAuthMiddleware, asyncHandler(clienteAuthController.excluirConta));
 clienteAuthRoutes.post("/sair", clienteAuthMiddleware, asyncHandler(clienteAuthController.sair));
+clienteAuthRoutes.post("/esqueci-senha", authRateLimit, asyncHandler(clienteAuthController.esqueciSenha));
+clienteAuthRoutes.post("/redefinir-senha", authRateLimit, asyncHandler(clienteAuthController.redefinirSenha));

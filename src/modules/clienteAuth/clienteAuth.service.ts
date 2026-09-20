@@ -1,8 +1,17 @@
 import { AppError } from "../../utils/AppError";
+import { env } from "../../config/env";
+import { enviarEmailRedefinicaoSenha } from "../../config/email";
 import { isValidCpf, normalizeCpf } from "../../utils/cpf";
 import { signClienteToken } from "../../utils/jwt";
 import { comparePassword, getDummyHash, hashPassword } from "../../utils/password";
+import { gerarTokenReset, hashToken } from "../../utils/resetToken";
 import { clienteAuthRepository, ClienteRow } from "./clienteAuth.repository";
+
+const RESET_TOKEN_VALIDADE_MS = 30 * 60 * 1000; // 30 minutos
+/** Resposta sempre igual, exista ou não o CPF, tenha ou não e-mail — senão dá
+ *  pra descobrir por aqui se um CPF está cadastrado (enumeração). */
+const MENSAGEM_ESQUECI_SENHA =
+  "Se encontrarmos uma conta com e-mail cadastrado para esse CPF, enviaremos um link de redefinição.";
 
 export interface RegistrarClienteInput {
   nome: string;
@@ -66,6 +75,29 @@ export const clienteAuthService = {
   async excluirConta(clienteId: string) {
     const ok = await clienteAuthRepository.deleteById(clienteId);
     if (!ok) throw AppError.notFound("Cliente");
+  },
+
+  async esqueciSenha(cpf: string) {
+    const cliente = await clienteAuthRepository.findByCpf(normalizeCpf(cpf));
+    if (cliente?.email) {
+      const { token, hash } = gerarTokenReset();
+      const expiraEm = new Date(Date.now() + RESET_TOKEN_VALIDADE_MS);
+      await clienteAuthRepository.salvarTokenReset(cliente.id, hash, expiraEm);
+      const base = env.appClienteUrl ?? "";
+      const link = `${base}/app/redefinir-senha?token=${token}`;
+      await enviarEmailRedefinicaoSenha(cliente.email, cliente.nome, link);
+    }
+    return { mensagem: MENSAGEM_ESQUECI_SENHA };
+  },
+
+  async redefinirSenha(token: string, novaSenha: string) {
+    const cliente = await clienteAuthRepository.findByResetTokenHash(hashToken(token));
+    if (!cliente) throw new AppError("Link inválido ou expirado. Solicite um novo.", 400);
+    const senhaHash = await hashPassword(novaSenha);
+    await clienteAuthRepository.redefinirSenhaComToken(cliente.id, senhaHash);
+    // Já loga a pessoa na hora — evita mais um passo de digitar a senha nova
+    // de novo na tela de login logo depois de acabar de criá-la.
+    return await emitir({ ...cliente, senha_hash: senhaHash });
   },
 };
 

@@ -28,6 +28,16 @@ const vapidPublicKey = (process.env.VAPID_PUBLIC_KEY ?? "").trim() || null;
 const vapidPrivateKey = (process.env.VAPID_PRIVATE_KEY ?? "").trim() || null;
 const vapidSubject = (process.env.VAPID_SUBJECT ?? "").trim() || "mailto:contato@example.com";
 
+// E-mail transacional (Resend) — usado só pra recuperação de senha do cliente.
+// Opcional: sem a chave, o link de redefinição vai pro log em vez de e-mail
+// de verdade (útil em dev; em produção sem isso configurado, ninguém recebe
+// o link, mas o servidor não quebra).
+const resendApiKey = (process.env.RESEND_API_KEY ?? "").trim() || null;
+const emailFrom = (process.env.EMAIL_FROM ?? "").trim() || null;
+// URL base do app do cliente (sem barra no final), usada pra montar o link
+// de redefinição de senha, ex.: "https://app.fidelizamais.com.br".
+const appClienteUrl = (process.env.APP_CLIENTE_URL ?? "").trim().replace(/\/$/, "") || null;
+
 export const env = {
   port: Number(process.env.PORT ?? 3000),
   nodeEnv: process.env.NODE_ENV ?? "development",
@@ -38,4 +48,7 @@ export const env = {
   vapidPublicKey,
   vapidPrivateKey,
   vapidSubject,
+  resendApiKey,
+  emailFrom,
+  appClienteUrl,
 };

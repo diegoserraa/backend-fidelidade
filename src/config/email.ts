@@ -23,7 +23,10 @@ export async function enviarEmailRedefinicaoSenha(destinatario: string, nome: st
     return;
   }
   await resend.emails.send({
-    from: env.emailFrom,
+    // Nome de exibição (não só o endereço cru) e uma versão em texto puro
+    // ao lado do HTML — sinais que ajudam a reputação/entrega em domínio
+    // novo (spam filter desconfia mais de e-mail só-HTML sem remetente nomeado).
+    from: `Fideliza+ <${env.emailFrom}>`,
     to: destinatario,
     subject: "Redefinir sua senha",
     html: `
@@ -31,6 +34,8 @@ export async function enviarEmailRedefinicaoSenha(destinatario: string, nome: st
       <p>Recebemos um pedido para redefinir a senha da sua conta. Clique no link abaixo para criar uma nova senha (válido por 30 minutos):</p>
       <p><a href="${link}">Redefinir minha senha</a></p>
       <p>Se você não pediu isso, pode ignorar este e-mail — sua senha continua a mesma.</p>
+      <p style="color:#888;font-size:12px;margin-top:24px;">Fideliza+ — programa de fidelidade</p>
     `,
+    text: `Olá, ${nome}!\n\nRecebemos um pedido para redefinir a senha da sua conta. Acesse o link abaixo para criar uma nova senha (válido por 30 minutos):\n\n${link}\n\nSe você não pediu isso, pode ignorar este e-mail — sua senha continua a mesma.\n\nFideliza+`,
   });
 }

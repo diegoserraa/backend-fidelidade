@@ -1,0 +1,24 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ dev ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Sincronizar com a pasta do app
+        run: |
+          rsync -av --delete \
+            --exclude='.git' \
+            --exclude='.env' \
+            "$GITHUB_WORKSPACE"/ /var/www/fidelidade/dev/backend
+
+      - name: Build e subir containers
+        run: |
+          cd /var/www/fidelidade/dev/backend
+          docker compose up -d --build

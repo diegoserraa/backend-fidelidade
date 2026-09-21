@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { query } from "../config/db";
+import { asyncHandler } from "../utils/asyncHandler";
 import { adminRoutes } from "../modules/admin/admin.routes";
 import { authRoutes } from "../modules/auth/auth.routes";
 import { clienteAuthRoutes } from "../modules/clienteAuth/clienteAuth.routes";
@@ -16,6 +18,18 @@ import { dashboardRoutes } from "../modules/dashboard/dashboard.routes";
 export const routes = Router();
 
 routes.get("/health", (_req, res) => res.status(200).json({ status: "ok" }));
+
+// Diferente de /health (que não toca no banco, ver config/db.ts): essa aqui
+// prova que a conexão com o Postgres (usuário/senha/host novos, self-hosted)
+// está funcionando de verdade — útil pra testar o deploy sem precisar de
+// uma rota autenticada.
+routes.get(
+  "/health/db",
+  asyncHandler(async (_req, res) => {
+    const { rows } = await query<{ agora: Date }>("SELECT NOW() AS agora");
+    res.status(200).json({ status: "ok", agora: rows[0].agora });
+  })
+);
 
 routes.use("/admin", adminRoutes);
 routes.use("/auth/cliente", clienteAuthRoutes);

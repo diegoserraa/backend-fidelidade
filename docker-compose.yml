@@ -1,0 +1,26 @@
+name: ${COMPOSE_PROJECT_NAME:-fidelidade-api-dev}
+
+services:
+  api:
+    build: .
+    container_name: ${CONTAINER_NAME:-fidelidade-api}
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT:-3002}:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    networks:
+      - shared-net
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  shared-net:
+    external: true

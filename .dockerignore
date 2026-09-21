@@ -1,0 +1,12 @@
+node_modules
+dist
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+migrations
+.git
+.vscode
+.idea
+*.log
+src/testes

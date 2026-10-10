@@ -2,6 +2,7 @@ import { Router } from "express";
 import { query } from "../config/db";
 import { asyncHandler } from "../utils/asyncHandler";
 import { gerarManifestoEmpresa } from "../modules/manifest/manifest.service";
+import { semCabecalhosDeHtml } from "../utils/recursoPublico";
 import { adminRoutes } from "../modules/admin/admin.routes";
 import { authRoutes } from "../modules/auth/auth.routes";
 import { clienteAuthRoutes } from "../modules/clienteAuth/clienteAuth.routes";
@@ -43,6 +44,7 @@ routes.get(
     const empresaId = typeof req.query.empresa === "string" ? req.query.empresa : null;
     const apiUrl = `${req.protocol}://${req.get("host")}/api`;
     const manifesto = await gerarManifestoEmpresa(empresaId, apiUrl);
+    semCabecalhosDeHtml(res);
     res.set("Content-Type", "application/manifest+json");
     res.set("Cache-Control", "public, max-age=3600");
     res.status(200).json(manifesto);

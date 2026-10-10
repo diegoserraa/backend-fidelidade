@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import { AppError } from "../../utils/AppError";
 import { gerarIconeEmpresa } from "../manifest/manifest.service";
+import { semCabecalhosDeHtml } from "../../utils/recursoPublico";
 import { empresaService } from "./empresa.service";
 
 const empresaIdParam = z.object({ empresaId: z.string().uuid() });
@@ -75,6 +76,7 @@ export const empresaController = {
     const { empresaId } = empresaIdParam.parse(req.params);
     const { size } = iconeQuery.parse(req.query);
     const png = await gerarIconeEmpresa(empresaId, size);
+    semCabecalhosDeHtml(res);
     res.set("Content-Type", "image/png");
     res.set("Cache-Control", "public, max-age=3600");
     res.status(200).send(png);

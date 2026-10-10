@@ -1,5 +1,6 @@
 import { AppError } from "../../utils/AppError";
 import { signIdentityToken, signResgateToken } from "../../utils/purposeToken";
+import { calcularNivel, DEFAULT_NIVEIS } from "../programaFidelidade/programaFidelidade.service";
 import { recompensasRepository } from "../recompensas/recompensas.repository";
 import { portalClienteRepository, ResgateClienteRow, VinculoRow } from "./portalCliente.repository";
 
@@ -142,30 +143,6 @@ async function exigirVinculoAtivo(clienteId: string, empresaId: string): Promise
   return vinculo;
 }
 
-// Níveis de fidelidade por pontos acumulados (ganhos ao longo do tempo — nunca
-// caem por resgate). Fixos por ora; dá para mover para `programa_fidelidade`.
-interface Nivel {
-  nome: string;
-  min: number;
-}
-const NIVEIS: Nivel[] = [
-  { nome: "Pãozinho", min: 0 },
-  { nome: "Baguete", min: 300 },
-  { nome: "Mestre Padeiro", min: 1200 },
-];
-
-function calcularNivel(pontosAcumulados: number) {
-  let nivel: Nivel = NIVEIS[0];
-  let proximoNivel: Nivel | null = NIVEIS[1] ?? null;
-  for (let i = 0; i < NIVEIS.length; i++) {
-    if (pontosAcumulados >= NIVEIS[i].min) {
-      nivel = NIVEIS[i];
-      proximoNivel = NIVEIS[i + 1] ?? null;
-    }
-  }
-  return { nivel: { ...nivel }, proximoNivel: proximoNivel ? { ...proximoNivel } : null };
-}
-
 function mapVinculo(v: VinculoRow) {
   const pontosAcumulados = Number(v.pontos_acumulados ?? 0);
   return {
@@ -183,7 +160,7 @@ function mapVinculo(v: VinculoRow) {
     pontosAcumulados,
     desde: v.desde,
     notificacoesAtivas: v.notificacoes_ativas,
-    ...calcularNivel(pontosAcumulados),
+    ...calcularNivel(pontosAcumulados, v.niveis ?? DEFAULT_NIVEIS),
   };
 }
 

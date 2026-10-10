@@ -1,4 +1,5 @@
 import { query } from "../../config/db";
+import { NivelConfigRow } from "../programaFidelidade/programaFidelidade.repository";
 
 export interface VinculoRow {
   cliente_empresa_id: string;
@@ -16,6 +17,7 @@ export interface VinculoRow {
   pontos_acumulados: string | null;
   desde: Date;
   notificacoes_ativas: boolean;
+  niveis: NivelConfigRow[] | null;
 }
 
 export interface MovimentacaoRow {
@@ -62,10 +64,12 @@ export const portalClienteRepository = {
               ce.notificacoes_ativas,
               COALESCE((SELECT SUM(valor) FROM compra WHERE cliente_empresa_id = ce.id), 0)::text AS total_gasto,
               COALESCE((SELECT SUM(pontos) FROM movimentacao_pontos
-                         WHERE cliente_empresa_id = ce.id AND tipo = 'entrada'), 0)::text AS pontos_acumulados
+                         WHERE cliente_empresa_id = ce.id AND tipo = 'entrada'), 0)::text AS pontos_acumulados,
+              pf.niveis
          FROM cliente_empresa ce
          JOIN empresa e ON e.id = ce.empresa_id
     LEFT JOIN empresa_config cfg ON cfg.empresa_id = e.id
+    LEFT JOIN programa_fidelidade pf ON pf.empresa_id = e.id
         WHERE ce.cliente_id = $1 AND e.status = 'ativa'
         ORDER BY e.nome ASC`,
       [clienteId]
@@ -90,10 +94,12 @@ export const portalClienteRepository = {
               ce.notificacoes_ativas,
               COALESCE((SELECT SUM(valor) FROM compra WHERE cliente_empresa_id = ce.id), 0)::text AS total_gasto,
               COALESCE((SELECT SUM(pontos) FROM movimentacao_pontos
-                         WHERE cliente_empresa_id = ce.id AND tipo = 'entrada'), 0)::text AS pontos_acumulados
+                         WHERE cliente_empresa_id = ce.id AND tipo = 'entrada'), 0)::text AS pontos_acumulados,
+              pf.niveis
          FROM cliente_empresa ce
          JOIN empresa e ON e.id = ce.empresa_id
     LEFT JOIN empresa_config cfg ON cfg.empresa_id = e.id
+    LEFT JOIN programa_fidelidade pf ON pf.empresa_id = e.id
         WHERE ce.cliente_id = $1 AND ce.empresa_id = $2 AND e.status = 'ativa'`,
       [clienteId, empresaId]
     );

@@ -72,6 +72,15 @@ export const clienteAuthService = {
     await clienteAuthRepository.incrementarSessao(clienteId, empresaId);
   },
 
+  /** Só diz SE existe conta pra esse CPF — nunca o nome nem outro dado, pra
+   *  não virar um jeito de descobrir quem é o dono de um CPF qualquer. */
+  async cpfExiste(cpf: string): Promise<boolean> {
+    const normalizado = normalizeCpf(cpf);
+    if (!isValidCpf(normalizado)) return false;
+    const cliente = await clienteAuthRepository.findByCpf(normalizado);
+    return Boolean(cliente?.senha_hash);
+  },
+
   async me(clienteId: string) {
     const cliente = await clienteAuthRepository.findById(clienteId);
     if (!cliente) throw AppError.notFound("Cliente");

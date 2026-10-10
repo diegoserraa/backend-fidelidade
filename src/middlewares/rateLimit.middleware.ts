@@ -26,3 +26,17 @@ export const authRateLimit = rateLimit({
   skipSuccessfulRequests: true,
   message: { erro: "Muitas tentativas. Aguarde alguns minutos antes de tentar de novo." },
 });
+
+/**
+ * Mais generoso que authRateLimit (não é login/senha, só "esse CPF já tem
+ * conta?" — a tela de cadastro chama sozinha enquanto a pessoa digita) mas
+ * ainda limitado: sem isso, dava pra varrer CPFs em sequência descobrindo
+ * quais têm conta.
+ */
+export const cpfCheckRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { erro: "Muitas tentativas. Aguarde alguns minutos antes de tentar de novo." },
+});

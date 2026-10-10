@@ -24,6 +24,10 @@ const esqueciSenhaSchema = z.object({
   cpf: z.string().min(11),
 });
 
+const cpfExisteSchema = z.object({
+  cpf: z.string().min(11),
+});
+
 const redefinirSenhaSchema = z.object({
   token: z.string().min(10),
   novaSenha: z.string().min(8),
@@ -49,6 +53,11 @@ export const clienteAuthController = {
     if (!req.clienteAuth) throw AppError.unauthorized();
     await clienteAuthService.sair(req.clienteAuth.clienteId, req.clienteAuth.empresaId);
     res.status(204).send();
+  },
+
+  async cpfExiste(req: Request, res: Response) {
+    const { cpf } = cpfExisteSchema.parse(req.query);
+    res.status(200).json({ existe: await clienteAuthService.cpfExiste(cpf) });
   },
 
   async esqueciSenha(req: Request, res: Response) {

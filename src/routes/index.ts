@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { query } from "../config/db";
 import { asyncHandler } from "../utils/asyncHandler";
+import { gerarManifestoEmpresa } from "../modules/manifest/manifest.service";
 import { adminRoutes } from "../modules/admin/admin.routes";
 import { authRoutes } from "../modules/auth/auth.routes";
 import { clienteAuthRoutes } from "../modules/clienteAuth/clienteAuth.routes";
@@ -28,6 +29,23 @@ routes.get(
   asyncHandler(async (_req, res) => {
     const { rows } = await query<{ agora: Date }>("SELECT NOW() AS agora");
     res.status(200).json({ status: "ok", agora: rows[0].agora });
+  })
+);
+
+// Manifesto do PWA gerado por requisição: a cada padaria (via ?empresa=) com
+// a logo/cor dela, em vez de um manifest.json fixo compartilhado — é o que
+// faz a tela de instalação/ícone nativo do celular mostrar a marca certa
+// mesmo o deploy sendo um só pra todas (ver index.html do front, que troca
+// o <link rel="manifest"> pra apontar aqui).
+routes.get(
+  "/manifest",
+  asyncHandler(async (req, res) => {
+    const empresaId = typeof req.query.empresa === "string" ? req.query.empresa : null;
+    const apiUrl = `${req.protocol}://${req.get("host")}/api`;
+    const manifesto = await gerarManifestoEmpresa(empresaId, apiUrl);
+    res.set("Content-Type", "application/manifest+json");
+    res.set("Cache-Control", "public, max-age=3600");
+    res.status(200).json(manifesto);
   })
 );
 

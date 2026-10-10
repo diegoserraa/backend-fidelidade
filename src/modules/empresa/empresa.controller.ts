@@ -1,9 +1,11 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { AppError } from "../../utils/AppError";
+import { gerarIconeEmpresa } from "../manifest/manifest.service";
 import { empresaService } from "./empresa.service";
 
 const empresaIdParam = z.object({ empresaId: z.string().uuid() });
+const iconeQuery = z.object({ size: z.coerce.number().int().refine((n) => n === 192 || n === 512) });
 
 const updateEmpresaSchema = z.object({
   nome: z.string().min(2).optional(),
@@ -64,5 +66,17 @@ export const empresaController = {
     const { empresaId } = empresaIdParam.parse(req.params);
     const config = await empresaService.getConfigPublica(empresaId);
     res.status(200).json(config);
+  },
+
+  /** Ícone quadrado gerado na hora (logo + fundo na cor primária) — usado
+   *  pelo manifesto dinâmico, pra instalação do PWA mostrar a marca certa
+   *  de cada padaria mesmo o deploy sendo compartilhado. */
+  async getIcone(req: Request, res: Response) {
+    const { empresaId } = empresaIdParam.parse(req.params);
+    const { size } = iconeQuery.parse(req.query);
+    const png = await gerarIconeEmpresa(empresaId, size);
+    res.set("Content-Type", "image/png");
+    res.set("Cache-Control", "public, max-age=3600");
+    res.status(200).send(png);
   },
 };

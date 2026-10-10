@@ -6,9 +6,11 @@ import { empresaController } from "./empresa.controller";
 
 export const empresaRoutes = Router();
 
-// Pública (sem auth) — identidade visual usada pela tela de login do app do
-// cliente, que ainda não tem sessão. Precisa vir antes do authMiddleware.
+// Públicas (sem auth) — identidade visual usada pela tela de login do app do
+// cliente (que ainda não tem sessão) e pelo manifesto dinâmico do PWA.
+// Precisam vir antes do authMiddleware.
 empresaRoutes.get("/:empresaId/publico", asyncHandler(empresaController.getConfigPublica));
+empresaRoutes.get("/:empresaId/icone.png", asyncHandler(empresaController.getIcone));
 
 empresaRoutes.use(authMiddleware);
 

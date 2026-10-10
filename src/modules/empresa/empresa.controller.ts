@@ -78,7 +78,12 @@ export const empresaController = {
     const png = await gerarIconeEmpresa(empresaId, size);
     semCabecalhosDeHtml(res);
     res.set("Content-Type", "image/png");
-    res.set("Cache-Control", "public, max-age=3600");
+    // Sem cache: já tomamos um susto com o navegador servindo ícone/cor
+    // antigos por até 1h depois de uma correção no backend (justamente
+    // durante os testes de instalação do PWA). Gerar o ícone é barato e essa
+    // rota só é chamada no momento da instalação (baixo tráfego) — não vale
+    // o risco de cache obsoleto pra economizar isso.
+    res.set("Cache-Control", "no-store");
     res.status(200).send(png);
   },
 };

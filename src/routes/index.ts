@@ -46,7 +46,11 @@ routes.get(
     const manifesto = await gerarManifestoEmpresa(empresaId, apiUrl);
     semCabecalhosDeHtml(res);
     res.set("Content-Type", "application/manifest+json");
-    res.set("Cache-Control", "public, max-age=3600");
+    // Sem cache, mesmo motivo do ícone (ver empresa.controller.ts/getIcone):
+    // já causou o navegador servir branding antiga por até 1h durante um
+    // teste de instalação do PWA, justo a tela que mais precisa estar certa
+    // na hora de uma demonstração.
+    res.set("Cache-Control", "no-store");
     res.status(200).json(manifesto);
   })
 );

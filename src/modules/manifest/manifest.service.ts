@@ -26,89 +26,21 @@ async function buscarImagem(url: string): Promise<Buffer | null> {
 }
 
 /**
- * Muitas logos já vêm com um fundo sólido próprio (em vez de transparente) —
- * nesse caso, pintar o quadrado do ícone com a cor primária da empresa cria
- * um "quadrado dentro de quadrado" feio (a borda do fundo da logo aparece).
- * Pra evitar isso, tenta descobrir essa cor de fundo amostrando os 4 cantos
- * da imagem (onde a arte do logo normalmente não chega) e usa ela no lugar —
- * assim a logo se funde com o fundo do ícone. Se os cantos forem
- * transparentes (logo já tem fundo transparente de verdade, caso ideal) ou a
- * imagem não puder ser lida, devolve null pra quem chamou usar o fallback
- * (cor primária configurada).
- */
-async function corDeFundoDaLogo(logoBuffer: Buffer): Promise<{ r: number; g: number; b: number } | null> {
-  try {
-    const img = sharp(logoBuffer).ensureAlpha();
-    const { data, info } = await img.raw().toBuffer({ resolveWithObject: true });
-    const { width, height, channels } = info;
-    if (!width || !height) return null;
-
-    const cantos: Array<[number, number]> = [
-      [0, 0],
-      [width - 1, 0],
-      [0, height - 1],
-      [width - 1, height - 1],
-    ];
-    const amostras = cantos
-      .map(([x, y]) => {
-        const i = (y * width + x) * channels;
-        return { r: data[i], g: data[i + 1], b: data[i + 2], a: data[i + 3] };
-      })
-      .filter((amostra) => amostra.a > 240); // ignora cantos transparentes
-
-    if (amostras.length === 0) return null;
-
-    const soma = amostras.reduce(
-      (acc, a) => ({ r: acc.r + a.r, g: acc.g + a.g, b: acc.b + a.b }),
-      { r: 0, g: 0, b: 0 }
-    );
-    return {
-      r: Math.round(soma.r / amostras.length),
-      g: Math.round(soma.g / amostras.length),
-      b: Math.round(soma.b / amostras.length),
-    };
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Cor de fundo efetiva do ícone/splash da empresa: a do próprio fundo da
- * logo quando dá pra descobrir, senão a cor primária configurada no painel.
- * Usada tanto pelo ícone (`gerarIconeEmpresa`) quanto pelo manifesto
- * (`background_color`, usada pela tela de splash nativa) — precisam bater,
- * senão o efeito de "quadrado dentro de quadrado" volta na splash mesmo com
- * o ícone certo.
- */
-async function corDeFundoEfetiva(
-  logoUrl: string | null | undefined,
-  corPrimaria: string | null | undefined
-): Promise<{ rgb: { r: number; g: number; b: number }; hex: string }> {
-  const fallback = hexParaRgb(corPrimaria ?? "#000000");
-  const logoBuffer = logoUrl ? await buscarImagem(logoUrl) : null;
-  const daLogo = logoBuffer ? await corDeFundoDaLogo(logoBuffer) : null;
-  const rgb = daLogo ?? fallback;
-  const hex =
-    "#" +
-    [rgb.r, rgb.g, rgb.b]
-      .map((c) => Math.max(0, Math.min(255, c)).toString(16).padStart(2, "0"))
-      .join("");
-  return { rgb, hex };
-}
-
-/**
  * Gera um ícone quadrado (fundo sólido + a logo centralizada) a partir da
- * logo que a padaria já configurou — não precisa de upload separado. Se a
- * logo não existir ou não puder ser lida/baixada (ex.: URL externa fora do
- * ar), devolve só o quadrado colorido — nunca quebra a geração do manifesto
- * por causa disso.
+ * logo que a padaria já configurou — não precisa de upload separado. O fundo
+ * usa `corFundo` (configurável no painel, com conta-gotas pra pegar a cor
+ * certa direto da logo) em vez da cor primária: muitas logos já vêm com um
+ * fundo sólido próprio, e pintar o quadrado do ícone com uma cor diferente
+ * da logo cria um "quadrado dentro de quadrado" feio. Se a logo não existir
+ * ou não puder ser lida/baixada (ex.: URL externa fora do ar), devolve só o
+ * quadrado colorido — nunca quebra a geração do manifesto por causa disso.
  */
 export async function gerarIconeEmpresa(empresaId: string, size: number): Promise<Buffer> {
   const config = await empresaService.getConfigPublica(empresaId);
-  const { rgb } = await corDeFundoEfetiva(config.logoUrl, config.corPrimaria);
+  const corFundo = hexParaRgb(config.corFundo);
 
   const base = sharp({
-    create: { width: size, height: size, channels: 4, background: { ...rgb, alpha: 1 } },
+    create: { width: size, height: size, channels: 4, background: corFundo },
   });
 
   const logoBuffer = config.logoUrl ? await buscarImagem(config.logoUrl) : null;
@@ -162,14 +94,13 @@ export async function gerarManifestoEmpresa(empresaId: string | null, apiUrl: st
   try {
     const config = await empresaService.getConfigPublica(empresaId);
     const iconeUrl = (size: number) => `${apiUrl}/empresa/${empresaId}/icone.png?size=${size}`;
-    const { hex: corDeFundo } = await corDeFundoEfetiva(config.logoUrl, config.corPrimaria);
     return {
       id: "/app/",
       name: `${config.nome} — Fidelidade`,
       short_name: config.nome.length > 20 ? "Meus Pontos" : config.nome,
       description: "Seu cartão de fidelidade, recompensas e extrato de pontos.",
       theme_color: config.corPrimaria ?? "#000000",
-      background_color: corDeFundo,
+      background_color: config.corFundo,
       display: "standalone" as const,
       orientation: "portrait" as const,
       scope: "/",

@@ -72,11 +72,6 @@ export const clienteAuthService = {
     return publico(cliente);
   },
 
-  async excluirConta(clienteId: string) {
-    const ok = await clienteAuthRepository.deleteById(clienteId);
-    if (!ok) throw AppError.notFound("Cliente");
-  },
-
   async esqueciSenha(cpf: string) {
     const cliente = await clienteAuthRepository.findByCpf(normalizeCpf(cpf));
     if (cliente?.email) {

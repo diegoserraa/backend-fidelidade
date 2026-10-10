@@ -104,10 +104,4 @@ export const clienteAuthRepository = {
     );
   },
 
-  /** Exclui a conta do cliente. Cascata apaga vínculos, compras, resgates e
-   *  movimentações em todas as empresas (LGPD — direito à exclusão). */
-  async deleteById(id: string): Promise<boolean> {
-    const { rowCount } = await query(`DELETE FROM cliente WHERE id = $1`, [id]);
-    return (rowCount ?? 0) > 0;
-  },
 };

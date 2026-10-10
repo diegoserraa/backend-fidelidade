@@ -9,7 +9,6 @@ export const clienteAuthRoutes = Router();
 clienteAuthRoutes.post("/registrar", authRateLimit, asyncHandler(clienteAuthController.registrar));
 clienteAuthRoutes.post("/login", authRateLimit, asyncHandler(clienteAuthController.login));
 clienteAuthRoutes.get("/me", clienteAuthMiddleware, asyncHandler(clienteAuthController.me));
-clienteAuthRoutes.delete("/me", clienteAuthMiddleware, asyncHandler(clienteAuthController.excluirConta));
 clienteAuthRoutes.post("/sair", clienteAuthMiddleware, asyncHandler(clienteAuthController.sair));
 clienteAuthRoutes.post("/esqueci-senha", authRateLimit, asyncHandler(clienteAuthController.esqueciSenha));
 clienteAuthRoutes.post("/redefinir-senha", authRateLimit, asyncHandler(clienteAuthController.redefinirSenha));

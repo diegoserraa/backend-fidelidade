@@ -41,12 +41,6 @@ export const clienteAuthController = {
     res.status(200).json(await clienteAuthService.me(req.clienteAuth.clienteId));
   },
 
-  async excluirConta(req: Request, res: Response) {
-    if (!req.clienteAuth) throw AppError.unauthorized();
-    await clienteAuthService.excluirConta(req.clienteAuth.clienteId);
-    res.status(204).send();
-  },
-
   async sair(req: Request, res: Response) {
     if (!req.clienteAuth) throw AppError.unauthorized();
     await clienteAuthService.sair(req.clienteAuth.clienteId);

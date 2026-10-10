@@ -90,4 +90,10 @@ export const portalClienteController = {
     await portalClienteService.atualizarNotificacoes(clienteId(req), empresaId, ativas);
     res.status(204).send();
   },
+
+  async sairDaEmpresa(req: Request, res: Response) {
+    const { empresaId } = empresaIdParam.parse(req.params);
+    await portalClienteService.sairDaEmpresa(clienteId(req), empresaId);
+    res.status(204).send();
+  },
 };

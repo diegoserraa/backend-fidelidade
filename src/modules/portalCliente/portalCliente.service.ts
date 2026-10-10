@@ -134,6 +134,15 @@ export const portalClienteService = {
     const ok = await portalClienteRepository.atualizarNotificacoes(clienteId, empresaId, ativas);
     if (!ok) throw AppError.notFound("Vínculo com a empresa");
   },
+
+  /** "Excluir conta" do ponto de vista do cliente, mas escopado à padaria
+   *  atual: histórico/pontos só dela somem, o vínculo com qualquer outra
+   *  padaria continua intacto. Substitui clienteAuth.excluirConta, que
+   *  apagava tudo de uma vez mesmo havendo vínculo com outras empresas. */
+  async sairDaEmpresa(clienteId: string, empresaId: string) {
+    const ok = await portalClienteRepository.sairDaEmpresa(clienteId, empresaId);
+    if (!ok) throw AppError.notFound("Vínculo com a empresa");
+  },
 };
 
 async function exigirVinculoAtivo(clienteId: string, empresaId: string): Promise<VinculoRow> {

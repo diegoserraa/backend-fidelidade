@@ -1,4 +1,4 @@
-import { query } from "../../config/db";
+import { query, withTransaction } from "../../config/db";
 import { NivelConfigRow } from "../programaFidelidade/programaFidelidade.repository";
 
 export interface VinculoRow {
@@ -123,6 +123,34 @@ export const portalClienteRepository = {
           SET status = 'ativo', updated_at = now()`,
       [clienteId, empresaId]
     );
+  },
+
+  /**
+   * Remove o vínculo do cliente só com ESTA empresa — o CASCADE em
+   * compra/movimentacao_pontos/resgate (ver migrations/001_init.sql) já
+   * limpa o histórico de pontos só dela junto, sem tocar em nenhuma outra
+   * padaria que o cliente também tenha vínculo. Se essa era a ÚLTIMA
+   * padaria dele, apaga também o cadastro global (login) — do contrário
+   * ficaria um cliente "órfão" sem nenhum vínculo, mas ainda logável.
+   * Tudo numa transação pra não sobrar um estado parcial se cair no meio.
+   */
+  async sairDaEmpresa(clienteId: string, empresaId: string): Promise<boolean> {
+    return withTransaction(async (client) => {
+      const { rowCount } = await client.query(
+        `DELETE FROM cliente_empresa WHERE cliente_id = $1 AND empresa_id = $2`,
+        [clienteId, empresaId]
+      );
+      if (!rowCount) return false;
+
+      const { rows } = await client.query<{ total: string }>(
+        `SELECT COUNT(*)::text AS total FROM cliente_empresa WHERE cliente_id = $1`,
+        [clienteId]
+      );
+      if (Number(rows[0].total) === 0) {
+        await client.query(`DELETE FROM cliente WHERE id = $1`, [clienteId]);
+      }
+      return true;
+    });
   },
 
   async listRecompensasAtivas(empresaId: string) {

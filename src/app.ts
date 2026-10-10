@@ -6,6 +6,30 @@ import { errorMiddleware, notFoundMiddleware } from "./middlewares/error.middlew
 import { generalRateLimit } from "./middlewares/rateLimit.middleware";
 import { routes } from "./routes";
 
+/**
+ * CORS_ORIGINS vira uma lista de padrões, cada um podendo ter `*` pra casar
+ * um subdomínio (ex.: "https://*.fidelidade-dev.zdmsolutions.com.br") — cada
+ * padaria instalada vive no próprio subdomínio (ver manifest.service.ts), e
+ * uma lista de match exato não daria conta disso sem listar empresa por
+ * empresa. Entradas sem `*` continuam batendo só com o valor exato.
+ */
+function validarOrigem(
+  padroes: string[]
+): (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => void {
+  const regexes = padroes.map((padrao) => {
+    const escapado = padrao.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\\\*/g, "[^.]+");
+    return new RegExp(`^${escapado}$`);
+  });
+  return (origin, callback) => {
+    // Sem Origin (curl, apps nativos, requisições same-origin) — nada a
+    // bloquear, o cabeçalho só existe pra o NAVEGADOR decidir se expõe a
+    // resposta a uma página de outra origem.
+    if (!origin) return callback(null, true);
+    if (regexes.some((regex) => regex.test(origin))) return callback(null, true);
+    callback(new Error("Origem não permitida pelo CORS."));
+  };
+}
+
 export function createApp(): Express {
   const app = express();
 
@@ -17,7 +41,7 @@ export function createApp(): Express {
   app.use(helmet());
 
   if (env.corsOrigins) {
-    app.use(cors({ origin: env.corsOrigins }));
+    app.use(cors({ origin: validarOrigem(env.corsOrigins) }));
   } else {
     // eslint-disable-next-line no-console
     console.warn(

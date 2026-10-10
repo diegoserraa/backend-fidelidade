@@ -17,7 +17,9 @@ if (jwtSecret.length < 32) {
 }
 
 // Origens liberadas para o navegador chamar a API (painel + app do cliente).
-// Lista separada por vírgula, ex.: "https://painel.suapadaria.com,https://app.suapadaria.com".
+// Lista separada por vírgula — aceita "*" pra casar um subdomínio inteiro
+// (cada padaria tem o próprio, ver manifest.service.ts), ex.:
+// "https://painel.suapadaria.com,https://*.app.suapadaria.com".
 // Sem essa variável, libera geral (só para desenvolvimento local).
 const corsOriginsRaw = (process.env.CORS_ORIGINS ?? "").trim();
 const corsOrigins = corsOriginsRaw ? corsOriginsRaw.split(",").map((o) => o.trim()) : null;

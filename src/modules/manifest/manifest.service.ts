@@ -95,13 +95,15 @@ export async function gerarManifestoEmpresa(empresaId: string | null, apiUrl: st
   try {
     const config = await empresaService.getConfigPublica(empresaId);
     const iconeUrl = (size: number) => `${apiUrl}/empresa/${empresaId}/icone.png?size=${size}`;
-    // Endereço PRÓPRIO por empresa (/app/<id>/, não /app/?empresa=<id>) — e
-    // `scope` igual a ele, não "/" compartilhado. O Android usa origem +
-    // escopo (não só o `id`) pra decidir se um link pertence a um app já
-    // instalado; com `scope: "/"` igual pra todas as padarias, escanear a
-    // segunda abria dentro do app já instalado da primeira em vez de
-    // oferecer uma instalação nova e separada.
-    const baseUrl = `/app/${empresaId}/`;
+    // SUBDOMÍNIO próprio por empresa, não só um caminho (/app/<id>/) no
+    // mesmo domínio — o Android parece identificar o pacote instalado pela
+    // ORIGEM (domínio), não pelo escopo/id do manifesto; duas padarias no
+    // MESMO domínio (só o caminho mudando) ainda batiam como "já instalado"
+    // mesmo com escopo/id diferentes. `apiUrl` é algo como
+    // "https://fidelidade-dev.zdmsolutions.com.br/api" (mesma origem base
+    // do front, API só muda o caminho) — troca só o protocolo+host.
+    const apiUrlObj = new URL(apiUrl);
+    const baseUrl = `${apiUrlObj.protocol}//${empresaId}.${apiUrlObj.host}/app/`;
     return {
       id: baseUrl,
       name: `${config.nome} — Fidelidade`,

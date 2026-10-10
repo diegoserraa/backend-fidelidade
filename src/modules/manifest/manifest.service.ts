@@ -95,13 +95,15 @@ export async function gerarManifestoEmpresa(empresaId: string | null, apiUrl: st
   try {
     const config = await empresaService.getConfigPublica(empresaId);
     const iconeUrl = (size: number) => `${apiUrl}/empresa/${empresaId}/icone.png?size=${size}`;
+    // Endereço PRÓPRIO por empresa (/app/<id>/, não /app/?empresa=<id>) — e
+    // `scope` igual a ele, não "/" compartilhado. O Android usa origem +
+    // escopo (não só o `id`) pra decidir se um link pertence a um app já
+    // instalado; com `scope: "/"` igual pra todas as padarias, escanear a
+    // segunda abria dentro do app já instalado da primeira em vez de
+    // oferecer uma instalação nova e separada.
+    const baseUrl = `/app/${empresaId}/`;
     return {
-      // Precisa ser ÚNICO por empresa — é o que o Android/Chrome usa pra
-      // decidir se uma instalação é um app novo ou "atualização" de um já
-      // instalado. Com o mesmo id pra todas as padarias, instalar a
-      // segunda só sobrescrevia o ícone da primeira em vez de criar um
-      // ícone separado na tela inicial.
-      id: `/app/?empresa=${empresaId}`,
+      id: baseUrl,
       name: `${config.nome} — Fidelidade`,
       short_name: config.nome.length > 20 ? "Meus Pontos" : config.nome,
       description: "Seu cartão de fidelidade, recompensas e extrato de pontos.",
@@ -109,8 +111,8 @@ export async function gerarManifestoEmpresa(empresaId: string | null, apiUrl: st
       background_color: config.corIconeFundo,
       display: "standalone" as const,
       orientation: "portrait" as const,
-      scope: "/",
-      start_url: `/app/?empresa=${empresaId}`,
+      scope: baseUrl,
+      start_url: baseUrl,
       icons: [
         { src: iconeUrl(192), sizes: "192x192", type: "image/png", purpose: "any" },
         { src: iconeUrl(512), sizes: "512x512", type: "image/png", purpose: "any" },

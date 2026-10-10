@@ -7,14 +7,18 @@ export interface ClienteRow {
   email: string | null;
   telefone: string | null;
   senha_hash: string | null;
-  sessao_versao: number;
   created_at: Date;
 }
+
+/** Usado quando não dá pra identificar a empresa no momento do login (ex.:
+ *  acesso direto pelo domínio base, sem subdomínio nem ?empresa=) — não pode
+ *  ser NULL porque é parte da chave primária de cliente_sessao. */
+const EMPRESA_SENTINELA = "00000000-0000-0000-0000-000000000000";
 
 export const clienteAuthRepository = {
   async findByCpf(cpf: string): Promise<ClienteRow | null> {
     const { rows } = await query<ClienteRow>(
-      `SELECT id, nome, cpf, email, telefone, senha_hash, sessao_versao, created_at
+      `SELECT id, nome, cpf, email, telefone, senha_hash, created_at
          FROM cliente WHERE cpf = $1 LIMIT 1`,
       [cpf]
     );
@@ -23,7 +27,7 @@ export const clienteAuthRepository = {
 
   async findById(id: string): Promise<ClienteRow | null> {
     const { rows } = await query<ClienteRow>(
-      `SELECT id, nome, cpf, email, telefone, senha_hash, sessao_versao, created_at
+      `SELECT id, nome, cpf, email, telefone, senha_hash, created_at
          FROM cliente WHERE id = $1 LIMIT 1`,
       [id]
     );
@@ -40,7 +44,7 @@ export const clienteAuthRepository = {
     const { rows } = await query<ClienteRow>(
       `INSERT INTO cliente (nome, cpf, senha_hash, telefone, email)
        VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, nome, cpf, email, telefone, senha_hash, sessao_versao, created_at`,
+       RETURNING id, nome, cpf, email, telefone, senha_hash, created_at`,
       [dados.nome, dados.cpf, dados.senhaHash, dados.telefone, dados.email]
     );
     return rows[0];
@@ -52,24 +56,30 @@ export const clienteAuthRepository = {
   },
 
   /**
-   * Sessão única: incrementa a versão a cada login/cadastro, invalidando
-   * qualquer token emitido antes (ver clienteAuth.middleware.ts). Retorna a
-   * nova versão, já usada pra assinar o token desta sessão.
+   * Sessão única POR PADARIA: incrementa a versão de (cliente, empresa) a
+   * cada login/cadastro NESSA empresa, invalidando só os tokens emitidos
+   * antes PRA ELA (ver clienteAuth.middleware.ts) — cada padaria é um
+   * app/origem própria agora (ver manifest.service.ts), então logar na
+   * padaria B não pode derrubar a sessão já aberta na padaria A no mesmo
+   * aparelho. Retorna a nova versão, já usada pra assinar o token.
    */
-  async incrementarSessao(id: string): Promise<number> {
-    const { rows } = await query<{ sessao_versao: number }>(
-      `UPDATE cliente SET sessao_versao = sessao_versao + 1 WHERE id = $1 RETURNING sessao_versao`,
-      [id]
+  async incrementarSessao(clienteId: string, empresaId: string | null): Promise<number> {
+    const { rows } = await query<{ versao: number }>(
+      `INSERT INTO cliente_sessao (cliente_id, empresa_id, versao)
+       VALUES ($1, $2, 1)
+       ON CONFLICT (cliente_id, empresa_id) DO UPDATE SET versao = cliente_sessao.versao + 1, updated_at = now()
+       RETURNING versao`,
+      [clienteId, empresaId ?? EMPRESA_SENTINELA]
     );
-    return rows[0].sessao_versao;
+    return rows[0].versao;
   },
 
-  async sessaoVersaoAtual(id: string): Promise<number | null> {
-    const { rows } = await query<{ sessao_versao: number }>(
-      `SELECT sessao_versao FROM cliente WHERE id = $1`,
-      [id]
+  async sessaoVersaoAtual(clienteId: string, empresaId: string | null): Promise<number | null> {
+    const { rows } = await query<{ versao: number }>(
+      `SELECT versao FROM cliente_sessao WHERE cliente_id = $1 AND empresa_id = $2`,
+      [clienteId, empresaId ?? EMPRESA_SENTINELA]
     );
-    return rows[0]?.sessao_versao ?? null;
+    return rows[0]?.versao ?? null;
   },
 
   async salvarTokenReset(id: string, tokenHash: string, expiraEm: Date): Promise<void> {
@@ -82,7 +92,7 @@ export const clienteAuthRepository = {
   /** Só acha o cliente se o token bater E ainda não tiver expirado. */
   async findByResetTokenHash(tokenHash: string): Promise<ClienteRow | null> {
     const { rows } = await query<ClienteRow>(
-      `SELECT id, nome, cpf, email, telefone, senha_hash, sessao_versao, created_at
+      `SELECT id, nome, cpf, email, telefone, senha_hash, created_at
          FROM cliente
         WHERE reset_senha_token_hash = $1 AND reset_senha_expira_em > now()
         LIMIT 1`,

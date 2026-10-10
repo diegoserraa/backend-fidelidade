@@ -17,13 +17,16 @@ export function verifyToken(token: string): JwtPayload {
 }
 
 /**
- * Sessão do cliente (app / portal). O payload não tem `empresaId` — o cliente é
- * PF e transita entre várias empresas. O campo `scope` separa este token do de
- * usuário da empresa, então um nunca é aceito no lugar do outro. `sv` (sessão
- * versão) impõe sessão única — ver clienteAuth.middleware.ts.
+ * Sessão do cliente (app / portal). O cliente é PF e pode estar vinculado a
+ * várias empresas, mas cada padaria hoje é um app/origem própria (ver
+ * manifest.service.ts) — então o token carimba qual empresa originou esse
+ * login, e a sessão única (`sv`) é rastreada por (cliente, empresa), não
+ * globalmente: logar na MESMA padaria em outro aparelho invalida esse token,
+ * mas logar em OUTRA padaria não mexe nele. O campo `scope` separa este
+ * token do de usuário da empresa, então um nunca é aceito no lugar do outro.
  */
-export function signClienteToken(clienteId: string, sessaoVersao: number): string {
-  const payload: ClienteJwtPayload = { clienteId, scope: "cliente", sv: sessaoVersao };
+export function signClienteToken(clienteId: string, sessaoVersao: number, empresaId: string | null): string {
+  const payload: ClienteJwtPayload = { clienteId, scope: "cliente", sv: sessaoVersao, empresaId };
   return jwt.sign(payload, env.jwtSecret, {
     expiresIn: env.jwtExpiresIn as SignOptions["expiresIn"],
   });
@@ -34,7 +37,12 @@ export function verifyClienteToken(token: string): ClienteJwtPayload {
   if (payload.scope !== "cliente" || !payload.clienteId || typeof payload.sv !== "number") {
     throw new Error("TOKEN_ESCOPO_INVALIDO");
   }
-  return { clienteId: payload.clienteId, scope: "cliente", sv: payload.sv };
+  return {
+    clienteId: payload.clienteId,
+    scope: "cliente",
+    sv: payload.sv,
+    empresaId: payload.empresaId ?? null,
+  };
 }
 
 /**

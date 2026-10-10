@@ -12,9 +12,17 @@ export interface JwtPayload {
 export interface ClienteJwtPayload {
   clienteId: string;
   scope: "cliente";
-  /** Versão da sessão no momento em que o token foi emitido — comparada com
-   *  `cliente.sessao_versao` a cada request (clienteAuth.middleware) para
-   *  impor sessão única: logar num aparelho novo invalida os anteriores. */
+  /** Empresa cujo endereço (subdomínio, ver manifest.service.ts) originou o
+   *  login — cada padaria é um app/origem própria agora, então a sessão é
+   *  rastreada por (cliente, empresa), não só por cliente. `null` quando não
+   *  dá pra identificar a empresa na hora do login (ex.: acesso direto pelo
+   *  domínio base, sem subdomínio nem ?empresa=). */
+  empresaId: string | null;
+  /** Versão da sessão PARA ESTA EMPRESA no momento em que o token foi
+   *  emitido — comparada com `cliente_sessao` a cada request
+   *  (clienteAuth.middleware) para impor sessão única por padaria: logar
+   *  nessa MESMA padaria num aparelho novo invalida o anterior, mas logar
+   *  em OUTRA padaria (próprio app dela) não mexe nessa. */
   sv: number;
 }
 

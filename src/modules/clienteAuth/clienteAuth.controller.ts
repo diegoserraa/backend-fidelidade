@@ -9,11 +9,15 @@ const registrarSchema = z.object({
   senha: z.string().min(8),
   telefone: z.string().min(8).optional(),
   email: z.string().email().optional(),
+  // Empresa cujo endereço originou o cadastro — carimbada no token pra
+  // sessão única funcionar por padaria, não globalmente (ver jwt.ts).
+  empresaId: z.string().uuid().optional(),
 });
 
 const loginSchema = z.object({
   cpf: z.string().min(11),
   senha: z.string().min(6),
+  empresaId: z.string().uuid().optional(),
 });
 
 const esqueciSenhaSchema = z.object({
@@ -43,7 +47,7 @@ export const clienteAuthController = {
 
   async sair(req: Request, res: Response) {
     if (!req.clienteAuth) throw AppError.unauthorized();
-    await clienteAuthService.sair(req.clienteAuth.clienteId);
+    await clienteAuthService.sair(req.clienteAuth.clienteId, req.clienteAuth.empresaId);
     res.status(204).send();
   },
 

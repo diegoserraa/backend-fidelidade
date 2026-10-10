@@ -124,11 +124,25 @@ export const clientesService = {
     let clienteId: string;
 
     if (entrada.token) {
+      let decodificado: { clienteId: string; empresaId: string | null };
       try {
-        clienteId = verifyIdentityToken(entrada.token).clienteId;
+        decodificado = verifyIdentityToken(entrada.token);
       } catch {
         throw new AppError("QR inválido ou expirado. Peça para o cliente gerar outro.", 422);
       }
+      // O QR carimba a padaria que o cliente tinha selecionada no app dele
+      // ao gerar — mesmo ele sendo membro de várias, o QR só vale pra
+      // pontuar na que estava escolhida na hora. Evita o cliente mostrar
+      // (ou o atendente escanear) achando que está pontuando numa padaria
+      // quando na verdade credita silenciosamente em outra que ele também
+      // participa.
+      if (decodificado.empresaId !== empresaId) {
+        throw new AppError(
+          "Esse QR foi gerado para outra padaria. Peça para o cliente trocar de padaria no app (Perfil) e mostrar o QR de novo.",
+          422
+        );
+      }
+      clienteId = decodificado.clienteId;
     } else if (entrada.cpf) {
       const cpf = normalizeCpf(entrada.cpf);
       if (!isValidCpf(cpf)) throw new AppError("CPF inválido.", 422);

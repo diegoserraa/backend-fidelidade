@@ -31,7 +31,8 @@ export const portalClienteController = {
   },
 
   async gerarQr(req: Request, res: Response) {
-    res.status(200).json(portalClienteService.gerarQr(clienteId(req)));
+    const { empresaId } = empresaIdParam.parse(req.params);
+    res.status(200).json(await portalClienteService.gerarQr(clienteId(req), empresaId));
   },
 
   async entrar(req: Request, res: Response) {

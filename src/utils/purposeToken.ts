@@ -19,6 +19,7 @@ const RESGATE_TTL = "5m";
 interface IdentityClaims {
   typ: "id";
   sub: string; // clienteId
+  eid: string; // empresaId selecionada no app do cliente ao gerar o QR
 }
 
 interface ResgateClaims {
@@ -27,20 +28,31 @@ interface ResgateClaims {
   eid: string; // empresaId
 }
 
-export function signIdentityToken(clienteId: string): { token: string; expiraEm: string } {
-  const token = jwt.sign({ typ: "id", sub: clienteId } satisfies IdentityClaims, env.jwtSecret, {
-    expiresIn: IDENTITY_TTL,
-  });
+export function signIdentityToken(
+  clienteId: string,
+  empresaId: string
+): { token: string; expiraEm: string } {
+  const token = jwt.sign(
+    { typ: "id", sub: clienteId, eid: empresaId } satisfies IdentityClaims,
+    env.jwtSecret,
+    { expiresIn: IDENTITY_TTL }
+  );
   const { exp } = jwt.decode(token) as { exp: number };
   return { token, expiraEm: new Date(exp * 1000).toISOString() };
 }
 
-export function verifyIdentityToken(token: string): { clienteId: string } {
+/**
+ * `empresaId` vem null só pra um QR emitido nos ~90s antes de um deploy
+ * desta mudança (token antigo, sem o campo `eid`) — nunca em uso normal.
+ * Quem chama decide o que fazer com null; `clientes.service.ts` trata como
+ * "não bate com nenhuma empresa", pedindo pra gerar um QR novo.
+ */
+export function verifyIdentityToken(token: string): { clienteId: string; empresaId: string | null } {
   const payload = jwt.verify(token, env.jwtSecret) as Partial<IdentityClaims>;
   if (payload.typ !== "id" || !payload.sub) {
     throw new Error("TOKEN_TIPO_INVALIDO");
   }
-  return { clienteId: payload.sub };
+  return { clienteId: payload.sub, empresaId: payload.eid ?? null };
 }
 
 export function signResgateToken(resgateId: string, empresaId: string): { token: string; expiraEm: string } {

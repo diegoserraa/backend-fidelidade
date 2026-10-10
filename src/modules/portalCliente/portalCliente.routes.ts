@@ -8,12 +8,12 @@ export const portalClienteRoutes = Router();
 portalClienteRoutes.use(clienteAuthMiddleware);
 
 portalClienteRoutes.get("/empresas", asyncHandler(portalClienteController.listEmpresas));
-portalClienteRoutes.post("/qr", asyncHandler(portalClienteController.gerarQr));
 portalClienteRoutes.post("/push/subscribe", asyncHandler(portalClienteController.inscreverPush));
 portalClienteRoutes.post("/push/unsubscribe", asyncHandler(portalClienteController.desinscreverPush));
 portalClienteRoutes.get("/resgates/:id", asyncHandler(portalClienteController.getResgate));
 portalClienteRoutes.delete("/resgates/:id", asyncHandler(portalClienteController.cancelarResgate));
 portalClienteRoutes.post("/:empresaId/entrar", asyncHandler(portalClienteController.entrar));
+portalClienteRoutes.post("/:empresaId/qr", asyncHandler(portalClienteController.gerarQr));
 portalClienteRoutes.get("/:empresaId/recompensas", asyncHandler(portalClienteController.listRecompensas));
 portalClienteRoutes.get("/:empresaId/extrato", asyncHandler(portalClienteController.getExtrato));
 portalClienteRoutes.post("/:empresaId/resgates", asyncHandler(portalClienteController.solicitarResgate));

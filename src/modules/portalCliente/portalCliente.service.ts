@@ -12,9 +12,14 @@ export const portalClienteService = {
     return vinculos.map(mapVinculo);
   },
 
-  /** Token curto de identidade para o app renderizar como QR no balcão. */
-  gerarQr(clienteId: string) {
-    return signIdentityToken(clienteId);
+  /** Token curto de identidade para o app renderizar como QR no balcão —
+   *  carimbado com a padaria atual (`empresaId`), que é quem valida no
+   *  outro lado (ver clientes.service.ts identificar). Exige vínculo ativo
+   *  aqui também: sem isso, um QR gerado pra uma empresa que o cliente nem
+   *  participa só falharia mais tarde, no balcão, com um erro mais confuso. */
+  async gerarQr(clienteId: string, empresaId: string) {
+    await exigirVinculoAtivo(clienteId, empresaId);
+    return signIdentityToken(clienteId, empresaId);
   },
 
   /** Cliente entra sozinho no programa de uma empresa (app single-tenant). */

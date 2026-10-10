@@ -112,8 +112,13 @@ export const clientesService = {
 
   /**
    * Identifica o cliente no balcão a partir do QR (token de identidade) ou do
-   * CPF digitado. Se ainda não houver vínculo com esta empresa, cria um na hora
-   * (auto-vínculo) e sinaliza `novoVinculo`.
+   * CPF digitado — só pra ganhar pontos de uma compra já feita NESTA empresa.
+   * Exige vínculo existente de propósito: o QR de identidade do cliente é
+   * universal (a mesma conta serve em qualquer padaria), então sem essa
+   * checagem qualquer QR mostrado aqui criaria conta/vínculo automático e já
+   * creditaria pontos numa padaria que o cliente nunca escolheu entrar. Quem
+   * é cliente de verdade pela primeira vez nesta empresa usa "Novo cliente"
+   * (enrollBalcao), que é uma ação explícita do atendente.
    */
   async identificar(empresaId: string, entrada: { token?: string; cpf?: string }) {
     let clienteId: string;
@@ -135,11 +140,14 @@ export const clientesService = {
     }
 
     const vinculo = await clientesRepository.findVinculo(empresaId, clienteId);
-    const novoVinculo = !vinculo;
-    const clienteEmpresaId =
-      vinculo?.id ?? (await clientesRepository.criarOuReativarVinculo(empresaId, clienteId, false));
+    if (!vinculo) {
+      throw new AppError(
+        "Esse QR/CPF não é de um cliente desta empresa. Cadastre pelo balcão (\"Novo cliente\") primeiro.",
+        404
+      );
+    }
 
-    const cliente = await this.getById(empresaId, clienteEmpresaId);
+    const cliente = await this.getById(empresaId, vinculo.id);
     return {
       clienteEmpresaId: cliente.id,
       clienteId: cliente.clienteId,
@@ -148,7 +156,6 @@ export const clientesService = {
       telefone: cliente.telefone,
       saldoPontos: cliente.saldoPontos,
       status: cliente.status,
-      novoVinculo,
     };
   },
 };

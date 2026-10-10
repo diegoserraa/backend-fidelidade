@@ -96,7 +96,12 @@ export async function gerarManifestoEmpresa(empresaId: string | null, apiUrl: st
     const config = await empresaService.getConfigPublica(empresaId);
     const iconeUrl = (size: number) => `${apiUrl}/empresa/${empresaId}/icone.png?size=${size}`;
     return {
-      id: "/app/",
+      // Precisa ser ÚNICO por empresa — é o que o Android/Chrome usa pra
+      // decidir se uma instalação é um app novo ou "atualização" de um já
+      // instalado. Com o mesmo id pra todas as padarias, instalar a
+      // segunda só sobrescrevia o ícone da primeira em vez de criar um
+      // ícone separado na tela inicial.
+      id: `/app/?empresa=${empresaId}`,
       name: `${config.nome} — Fidelidade`,
       short_name: config.nome.length > 20 ? "Meus Pontos" : config.nome,
       description: "Seu cartão de fidelidade, recompensas e extrato de pontos.",

@@ -25,6 +25,7 @@ export const empresaService = {
         cor_secundaria: "#FFFFFF",
         cor_texto: "#FFFFFF",
         cor_fundo: "#FFFFFF",
+        cor_icone_fundo: null,
         exibir_total_gasto: true,
       }
     );
@@ -51,6 +52,10 @@ export const empresaService = {
       corSecundaria: config?.cor_secundaria ?? "#FFFFFF",
       corTexto: config?.cor_texto ?? "#FFFFFF",
       corFundo: config?.cor_fundo ?? "#FFFFFF",
+      // Fundo do ÍCONE/splash nativa de instalação — não confundir com
+      // corFundo acima (telas dentro do app). Sem configuração explícita,
+      // cai pra cor primária (a única cor de marca que toda empresa tem).
+      corIconeFundo: config?.cor_icone_fundo ?? config?.cor_primaria ?? "#000000",
     };
   },
 
@@ -62,6 +67,7 @@ export const empresaService = {
       corSecundaria?: string;
       corTexto?: string;
       corFundo?: string;
+      corIconeFundo?: string | null;
       exibirTotalGasto?: boolean;
     }
   ) {

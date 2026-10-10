@@ -16,6 +16,7 @@ export interface EmpresaConfigRow {
   cor_secundaria: string;
   cor_texto: string;
   cor_fundo: string;
+  cor_icone_fundo: string | null;
   exibir_total_gasto: boolean;
 }
 
@@ -47,7 +48,7 @@ export const empresaRepository = {
 
   async findConfig(empresaId: string): Promise<EmpresaConfigRow | null> {
     const { rows } = await query<EmpresaConfigRow>(
-      `SELECT empresa_id, logo_url, cor_primaria, cor_secundaria, cor_texto, cor_fundo, exibir_total_gasto
+      `SELECT empresa_id, logo_url, cor_primaria, cor_secundaria, cor_texto, cor_fundo, cor_icone_fundo, exibir_total_gasto
          FROM empresa_config
         WHERE empresa_id = $1`,
       [empresaId]
@@ -63,22 +64,28 @@ export const empresaRepository = {
       corSecundaria?: string;
       corTexto?: string;
       corFundo?: string;
+      corIconeFundo?: string | null;
       exibirTotalGasto?: boolean;
     }
   ): Promise<EmpresaConfigRow> {
+    // `corIconeFundo` pode ser explicitamente limpa (null, volta a seguir a
+    // cor_primaria automaticamente) — diferente de "não mexer" (ausente do
+    // corpo da requisição) — por isso o CASE WHEN em vez de um simples
+    // COALESCE (mesmo padrão já usado pra `validade`/`niveis`).
     const { rows } = await query<EmpresaConfigRow>(
       `INSERT INTO empresa_config
-         (empresa_id, logo_url, cor_primaria, cor_secundaria, cor_texto, cor_fundo, exibir_total_gasto)
-       VALUES ($1, $2, COALESCE($3, '#000000'), COALESCE($4, '#FFFFFF'), COALESCE($5, '#FFFFFF'), COALESCE($6, '#FFFFFF'), COALESCE($7, true))
+         (empresa_id, logo_url, cor_primaria, cor_secundaria, cor_texto, cor_fundo, cor_icone_fundo, exibir_total_gasto)
+       VALUES ($1, $2, COALESCE($3, '#000000'), COALESCE($4, '#FFFFFF'), COALESCE($5, '#FFFFFF'), COALESCE($6, '#FFFFFF'), $7, COALESCE($8, true))
        ON CONFLICT (empresa_id) DO UPDATE
           SET logo_url = COALESCE($2, empresa_config.logo_url),
               cor_primaria = COALESCE($3, empresa_config.cor_primaria),
               cor_secundaria = COALESCE($4, empresa_config.cor_secundaria),
               cor_texto = COALESCE($5, empresa_config.cor_texto),
               cor_fundo = COALESCE($6, empresa_config.cor_fundo),
-              exibir_total_gasto = COALESCE($7, empresa_config.exibir_total_gasto),
+              cor_icone_fundo = CASE WHEN $9 THEN $7 ELSE empresa_config.cor_icone_fundo END,
+              exibir_total_gasto = COALESCE($8, empresa_config.exibir_total_gasto),
               updated_at = now()
-       RETURNING empresa_id, logo_url, cor_primaria, cor_secundaria, cor_texto, cor_fundo, exibir_total_gasto`,
+       RETURNING empresa_id, logo_url, cor_primaria, cor_secundaria, cor_texto, cor_fundo, cor_icone_fundo, exibir_total_gasto`,
       [
         empresaId,
         dados.logoUrl ?? null,
@@ -86,7 +93,9 @@ export const empresaRepository = {
         dados.corSecundaria ?? null,
         dados.corTexto ?? null,
         dados.corFundo ?? null,
+        dados.corIconeFundo ?? null,
         dados.exibirTotalGasto ?? null,
+        "corIconeFundo" in dados,
       ]
     );
     return rows[0];

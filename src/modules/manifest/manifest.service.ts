@@ -28,16 +28,17 @@ async function buscarImagem(url: string): Promise<Buffer | null> {
 /**
  * Gera um ícone quadrado (fundo sólido + a logo centralizada) a partir da
  * logo que a padaria já configurou — não precisa de upload separado. O fundo
- * usa `corFundo` (configurável no painel, com conta-gotas pra pegar a cor
- * certa direto da logo) em vez da cor primária: muitas logos já vêm com um
- * fundo sólido próprio, e pintar o quadrado do ícone com uma cor diferente
- * da logo cria um "quadrado dentro de quadrado" feio. Se a logo não existir
- * ou não puder ser lida/baixada (ex.: URL externa fora do ar), devolve só o
- * quadrado colorido — nunca quebra a geração do manifesto por causa disso.
+ * usa `corIconeFundo` (configurável no painel, com conta-gotas pra pegar a
+ * cor certa direto da logo — diferente de `corFundo`, que é o fundo das
+ * telas DENTRO do app): muitas logos já vêm com um fundo sólido próprio, e
+ * pintar o quadrado do ícone com uma cor diferente da logo cria um "quadrado
+ * dentro de quadrado" feio. Se a logo não existir ou não puder ser
+ * lida/baixada (ex.: URL externa fora do ar), devolve só o quadrado
+ * colorido — nunca quebra a geração do manifesto por causa disso.
  */
 export async function gerarIconeEmpresa(empresaId: string, size: number): Promise<Buffer> {
   const config = await empresaService.getConfigPublica(empresaId);
-  const corFundo = hexParaRgb(config.corFundo);
+  const corFundo = hexParaRgb(config.corIconeFundo);
 
   const base = sharp({
     create: { width: size, height: size, channels: 4, background: corFundo },
@@ -100,7 +101,7 @@ export async function gerarManifestoEmpresa(empresaId: string | null, apiUrl: st
       short_name: config.nome.length > 20 ? "Meus Pontos" : config.nome,
       description: "Seu cartão de fidelidade, recompensas e extrato de pontos.",
       theme_color: config.corPrimaria ?? "#000000",
-      background_color: config.corFundo,
+      background_color: config.corIconeFundo,
       display: "standalone" as const,
       orientation: "portrait" as const,
       scope: "/",

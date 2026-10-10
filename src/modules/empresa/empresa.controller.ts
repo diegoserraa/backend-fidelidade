@@ -32,6 +32,15 @@ const updateConfigSchema = z.object({
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/, "cor deve estar no formato hexadecimal, ex: #FF0000")
     .optional(),
+  // Fundo do ícone/splash nativa de instalação (diferente de corFundo, que é
+  // o fundo das telas dentro do app) — aceita null pra limpar e voltar a
+  // seguir a cor primária automaticamente.
+  corIconeFundo: z
+    .union([
+      z.string().regex(/^#[0-9A-Fa-f]{6}$/, "cor deve estar no formato hexadecimal, ex: #FF0000"),
+      z.null(),
+    ])
+    .optional(),
   exibirTotalGasto: z.boolean().optional(),
 });
 

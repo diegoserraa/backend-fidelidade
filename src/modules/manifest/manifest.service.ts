@@ -12,6 +12,24 @@ function hexParaRgb(hex: string): { r: number; g: number; b: number; alpha: numb
   return { r, g, b, alpha: 1 };
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Tira o subdomínio de empresa de um host, se tiver um (ex.:
+ * "<uuid>.fidelidade.com" → "fidelidade.com"). O app do cliente busca o
+ * manifesto na MESMA origem em que foi carregado — quando essa origem já é
+ * o subdomínio da própria padaria, `host` chega aqui já com o id dela na
+ * frente; sem tirar isso antes de montar a URL de volta, o id ficava
+ * duplicado ("<id>.<id>.fidelidade.com").
+ */
+function dominioBase(host: string): string {
+  const rotulos = host.split(".");
+  if (rotulos.length > 1 && UUID_RE.test(rotulos[0])) {
+    return rotulos.slice(1).join(".");
+  }
+  return host;
+}
+
 async function buscarImagem(url: string): Promise<Buffer | null> {
   try {
     const controller = new AbortController();
@@ -103,7 +121,7 @@ export async function gerarManifestoEmpresa(empresaId: string | null, apiUrl: st
     // "https://fidelidade-dev.zdmsolutions.com.br/api" (mesma origem base
     // do front, API só muda o caminho) — troca só o protocolo+host.
     const apiUrlObj = new URL(apiUrl);
-    const baseUrl = `${apiUrlObj.protocol}//${empresaId}.${apiUrlObj.host}/app/`;
+    const baseUrl = `${apiUrlObj.protocol}//${empresaId}.${dominioBase(apiUrlObj.host)}/app/`;
     return {
       id: baseUrl,
       name: `${config.nome} — Fidelidade`,

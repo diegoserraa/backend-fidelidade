@@ -12,6 +12,12 @@ const registrarSchema = z.object({
   // Empresa cujo endereço originou o cadastro — carimbada no token pra
   // sessão única funcionar por padaria, não globalmente (ver jwt.ts).
   empresaId: z.string().uuid().optional(),
+  // Checkbox obrigatório no cadastro (ver login.tsx) — backend também exige,
+  // não só o front, já que é a prova de consentimento LGPD que fica
+  // registrada (ver consentimento_lgpd_em em clienteAuth.repository.ts).
+  aceitouPrivacidade: z
+    .boolean()
+    .refine((v) => v === true, { message: "É preciso aceitar a política de privacidade para criar a conta." }),
 });
 
 const loginSchema = z.object({

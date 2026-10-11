@@ -42,17 +42,23 @@ export const clienteAuthRepository = {
     email: string | null;
   }): Promise<ClienteRow> {
     const { rows } = await query<ClienteRow>(
-      `INSERT INTO cliente (nome, cpf, senha_hash, telefone, email)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO cliente (nome, cpf, senha_hash, telefone, email, consentimento_lgpd_em)
+       VALUES ($1, $2, $3, $4, $5, now())
        RETURNING id, nome, cpf, email, telefone, senha_hash, created_at`,
       [dados.nome, dados.cpf, dados.senhaHash, dados.telefone, dados.email]
     );
     return rows[0];
   },
 
-  /** Define/atualiza a senha de um cliente que já existe (ex.: criado no balcão). */
+  /** Define/atualiza a senha de um cliente que já existe (ex.: criado no
+   *  balcão) — também carimba o consentimento LGPD, já que esse é o momento
+   *  em que essa pessoa aceita a política pela primeira vez (antes disso ela
+   *  nem tinha acesso de login, só existia como cadastro feito pelo balcão). */
   async setSenha(id: string, senhaHash: string): Promise<void> {
-    await query(`UPDATE cliente SET senha_hash = $2, updated_at = now() WHERE id = $1`, [id, senhaHash]);
+    await query(
+      `UPDATE cliente SET senha_hash = $2, consentimento_lgpd_em = now(), updated_at = now() WHERE id = $1`,
+      [id, senhaHash]
+    );
   },
 
   /**

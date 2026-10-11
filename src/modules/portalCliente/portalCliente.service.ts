@@ -123,9 +123,10 @@ export const portalClienteService = {
 
   async inscreverPush(
     clienteId: string,
+    empresaId: string | null,
     subscription: { endpoint: string; p256dh: string; auth: string }
   ) {
-    await portalClienteRepository.salvarPushSubscription(clienteId, subscription);
+    await portalClienteRepository.salvarPushSubscription(clienteId, empresaId, subscription);
   },
 
   async desinscreverPush(clienteId: string, endpoint: string) {

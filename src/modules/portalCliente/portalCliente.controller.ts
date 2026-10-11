@@ -71,7 +71,8 @@ export const portalClienteController = {
 
   async inscreverPush(req: Request, res: Response) {
     const { endpoint, keys } = pushSubscriptionSchema.parse(req.body);
-    await portalClienteService.inscreverPush(clienteId(req), {
+    if (!req.clienteAuth) throw AppError.unauthorized();
+    await portalClienteService.inscreverPush(clienteId(req), req.clienteAuth.empresaId, {
       endpoint,
       p256dh: keys.p256dh,
       auth: keys.auth,

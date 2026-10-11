@@ -84,12 +84,16 @@ export const promocoesRepository = {
     return rows[0] ?? null;
   },
 
+  /** `pt.empresa_id = $1`, não só o JOIN em cliente_empresa — sem isso, um
+   *  cliente com conta em mais de uma padaria recebia a campanha em TODAS as
+   *  padarias instaladas dele, não só na que disparou (ver comentário em
+   *  salvarPushSubscription, portalCliente.repository.ts). */
   async listPushSubscriptions(empresaId: string): Promise<PushSubscriptionRow[]> {
     const { rows } = await query<PushSubscriptionRow>(
       `SELECT DISTINCT pt.endpoint, pt.p256dh, pt.auth
          FROM push_subscription pt
-         JOIN cliente_empresa ce ON ce.cliente_id = pt.cliente_id
-        WHERE ce.empresa_id = $1 AND ce.status = 'ativo' AND ce.notificacoes_ativas = true`,
+         JOIN cliente_empresa ce ON ce.cliente_id = pt.cliente_id AND ce.empresa_id = pt.empresa_id
+        WHERE pt.empresa_id = $1 AND ce.status = 'ativo' AND ce.notificacoes_ativas = true`,
       [empresaId]
     );
     return rows;

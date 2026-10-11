@@ -262,17 +262,25 @@ export const portalClienteRepository = {
     return (rowCount ?? 0) > 0;
   },
 
-  /** Salva (ou atualiza as chaves de) a assinatura de push do dispositivo. */
+  /** Salva (ou atualiza as chaves de) a assinatura de push do dispositivo.
+   *  `empresaId` carimba de qual app/padaria essa inscrição veio — cada
+   *  padaria tem o próprio subdomínio/origem agora (ver manifest.service.ts),
+   *  então o navegador já cria uma inscrição DIFERENTE (endpoint diferente)
+   *  por padaria instalada; sem guardar de qual empresa é cada uma, o envio
+   *  de campanha (ver promocoes.repository.ts) não tinha como filtrar só as
+   *  inscrições da padaria que está mandando, e notificava o cliente em
+   *  TODAS as padarias dele de uma vez. */
   async salvarPushSubscription(
     clienteId: string,
+    empresaId: string | null,
     subscription: { endpoint: string; p256dh: string; auth: string }
   ): Promise<void> {
     await query(
-      `INSERT INTO push_subscription (cliente_id, endpoint, p256dh, auth)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO push_subscription (cliente_id, empresa_id, endpoint, p256dh, auth)
+       VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (endpoint) DO UPDATE
-          SET cliente_id = $1, p256dh = $3, auth = $4`,
-      [clienteId, subscription.endpoint, subscription.p256dh, subscription.auth]
+          SET cliente_id = $1, empresa_id = $2, p256dh = $4, auth = $5`,
+      [clienteId, empresaId, subscription.endpoint, subscription.p256dh, subscription.auth]
     );
   },
 

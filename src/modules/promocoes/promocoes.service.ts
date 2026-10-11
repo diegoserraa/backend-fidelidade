@@ -64,12 +64,18 @@ export const promocoesService = {
         `[push] VAPID não configurado — promoção "${promocao.titulo}" marcada como enviada sem notificar ${subscriptions.length} dispositivo(s).`
       );
     } else {
-      // A notificação usa a logo DESTA padaria, não um ícone genérico — o
-      // mesmo aparelho pode estar inscrito em várias (ver migration 011),
-      // então quem manda tem que se identificar visualmente.
-      const config = await empresaRepository.findConfig(empresaId);
+      // A notificação usa a logo E o nome DESTA padaria, não algo genérico —
+      // o mesmo aparelho pode estar inscrito em várias (ver migration 011) e
+      // o Android só mostra "Chrome" + um link técnico no rodapé da
+      // notificação pra apps instalados assim (fora da Play Store, ver
+      // chrome://webapks — delegação de identidade completa é só pra TWA);
+      // sem o nome no título, não dá pra saber qual padaria mandou.
+      const [config, empresa] = await Promise.all([
+        empresaRepository.findConfig(empresaId),
+        empresaRepository.findById(empresaId),
+      ]);
       const payload = JSON.stringify({
-        titulo: promocao.titulo,
+        titulo: empresa ? `${empresa.nome} · ${promocao.titulo}` : promocao.titulo,
         mensagem: promocao.mensagem,
         icone: config?.logo_url ?? null,
       });

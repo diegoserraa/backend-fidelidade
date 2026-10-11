@@ -89,13 +89,20 @@ export const clienteAuthService = {
 
   async esqueciSenha(cpf: string) {
     const cliente = await clienteAuthRepository.findByCpf(normalizeCpf(cpf));
-    if (cliente?.email) {
+    // Sem APP_CLIENTE_URL não dá pra montar um link de verdade (ficaria
+    // relativo, tipo "/app/redefinir-senha?token=...", que não funciona fora
+    // do navegador — quebrado dentro de um e-mail). Nesse caso cai no mesmo
+    // comportamento de "e-mail desativado" (loga e não manda), em vez de
+    // mandar um link quebrado pro cliente.
+    if (cliente?.email && env.appClienteUrl) {
       const { token, hash } = gerarTokenReset();
       const expiraEm = new Date(Date.now() + RESET_TOKEN_VALIDADE_MS);
       await clienteAuthRepository.salvarTokenReset(cliente.id, hash, expiraEm);
-      const base = env.appClienteUrl ?? "";
-      const link = `${base}/app/redefinir-senha?token=${token}`;
+      const link = `${env.appClienteUrl}/app/redefinir-senha?token=${token}`;
       await enviarEmailRedefinicaoSenha(cliente.email, cliente.nome, link);
+    } else if (cliente?.email) {
+      // eslint-disable-next-line no-console
+      console.warn("[email] APP_CLIENTE_URL não configurado — link de redefinição de senha não enviado.");
     }
     return { mensagem: MENSAGEM_ESQUECI_SENHA };
   },

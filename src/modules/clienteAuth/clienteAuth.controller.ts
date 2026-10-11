@@ -11,7 +11,11 @@ const registrarSchema = z.object({
   email: z.string().email().optional(),
   // Empresa cujo endereço originou o cadastro — carimbada no token pra
   // sessão única funcionar por padaria, não globalmente (ver jwt.ts).
-  empresaId: z.string().uuid().optional(),
+  // .nullable() além de .optional(): o front manda `null` explicitamente
+  // (não omite o campo) quando não dá pra identificar a padaria pela URL
+  // (ex.: acesso direto pelo domínio base, sem subdomínio) — ver EMPRESA_ID
+  // em config.ts.
+  empresaId: z.string().uuid().nullable().optional(),
   // Checkbox obrigatório no cadastro (ver login.tsx) — backend também exige,
   // não só o front, já que é a prova de consentimento LGPD que fica
   // registrada (ver consentimento_lgpd_em em clienteAuth.repository.ts).
@@ -23,7 +27,7 @@ const registrarSchema = z.object({
 const loginSchema = z.object({
   cpf: z.string().min(11),
   senha: z.string().min(6),
-  empresaId: z.string().uuid().optional(),
+  empresaId: z.string().uuid().nullable().optional(),
 });
 
 const esqueciSenhaSchema = z.object({

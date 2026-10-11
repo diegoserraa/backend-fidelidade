@@ -17,8 +17,14 @@ function validarOrigem(
   padroes: string[]
 ): (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => void {
   const regexes = padroes.map((padrao) => {
-    const escapado = padrao.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\\\*/g, "[^.]+");
-    return new RegExp(`^${escapado}$`);
+    // Separa pelo `*` ANTES de escapar — escapando a string inteira primeiro
+    // (como a versão anterior fazia) o `*` nunca sobra como `\*` pra essa
+    // troca encontrar (não está na lista de caracteres escapados), e o
+    // curinga vira um `*` de regex de verdade (zero-ou-mais) em vez de bater
+    // com o subdomínio. Dividindo primeiro, cada pedaço fixo é escapado
+    // isoladamente e junta com `[^.]+` no lugar de cada `*`.
+    const partes = padrao.split("*").map((parte) => parte.replace(/[.+?^${}()|[\]\\]/g, "\\$&"));
+    return new RegExp(`^${partes.join("[^.]+")}$`);
   });
   return (origin, callback) => {
     // Sem Origin (curl, apps nativos, requisições same-origin) — nada a
